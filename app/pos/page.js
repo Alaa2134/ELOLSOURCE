@@ -100,10 +100,9 @@ export default function PosPage() {
   }
 
   const COLS = ['code', 'name', 'qty', 'price', 'disc'];
-  // Enter أو المسطرة (Space) للتنقل بين الخانات — وآخر خانة تنزل للصف اللي تحت
+  // Enter ينقل بين الخانات — وآخر خانة تنزل للصف اللي تحت (المسطرة مسافة عادية)
   function onKey(e, r, c) {
-    const spaceNav = e.key === ' ' && c !== 'name'; // المسطرة في خانة الاسم بتكتب مسافة عادي
-    if (e.key !== 'Enter' && !spaceNav) return;
+    if (e.key !== 'Enter') return;
     e.preventDefault();
     if (c === 'code' && e.target.value) { lookupCode(r, e.target.value); return; }
     const ci = COLS.indexOf(c);
@@ -352,7 +351,7 @@ export default function PosPage() {
             </table>
           </div>
           <p className="muted" style={{ marginTop: 8, fontSize: 12 }}>
-            💡 اكتب الكود أو الاسم وهتظهر الاقتراحات — Enter أو المسطرة بينقلوك بين الخانات، وآخر خانة بتنزل للسطر الجديد.
+            💡 اكتب الكود أو الاسم وهتظهر الاقتراحات — Enter بينقلك بين الخانات، وآخر خانة بتنزل للسطر الجديد.
           </p>
         </div>
 
