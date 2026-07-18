@@ -444,8 +444,9 @@ table.tbl tr:hover td { background: #fef3ec; }
 /* ============ الفاتورة المطبوعة (بيان أسعار) ============ */
 .a4 {
   width: 210mm;
+  max-width: 100%;
   min-height: 285mm;
-  margin: 0 auto;
+  margin: 0 auto 10px;
   background: #fff;
   padding: 8mm;
   font-family: 'Amiri', 'Cairo', serif;
@@ -495,9 +496,11 @@ table.tbl tr:hover td { background: #fef3ec; }
   display: flex; align-items: center; justify-content: center; padding: 0 4px;
 }
 .logo-print img {
-  width: 72px; height: 72px;
+  width: 84px; height: 84px;
   object-fit: contain;
 }
+
+.inv-totals .tbox.shaded { background: #e8e8e8; }
 
 .inv-items { width: 100%; border-collapse: collapse; font-size: 14px; }
 .inv-items th {
@@ -531,8 +534,32 @@ table.tbl tr:hover td { background: #fef3ec; }
   body { background: #fff; }
   .sidebar, .topbar, .print-actions, .no-print { display: none !important; }
   .content { padding: 0; }
-  .a4 { width: auto; min-height: auto; margin: 0; padding: 0; }
+  .a4 { width: auto; min-height: 275mm; margin: 0; padding: 0; }
+  .a4-break { page-break-after: always; }
   @page { size: A4; margin: 8mm; }
+}
+
+/* الفاتورة ريسبونسف — على الموبايل بتتظبط مقاساتها تلقائياً */
+@media screen and (max-width: 880px) {
+  .a4 { min-height: auto; padding: 3mm; }
+  .inv-head { padding: 4px; gap: 4px; }
+  .inv-head .co .name { font-size: clamp(13px, 3.6vw, 20px); }
+  .inv-head .co .doc { font-size: clamp(11px, 3vw, 16px); }
+  .inv-head .co .tm { font-size: 9px; }
+  .inv-box { font-size: clamp(10px, 2.8vw, 14px); min-height: 22px; padding: 2px 4px; }
+  .inv-meta-table { font-size: clamp(8px, 2.4vw, 12px); }
+  .inv-meta-table td { padding: 2px 3px; }
+  .logo-print img { width: clamp(38px, 11vw, 64px); height: clamp(38px, 11vw, 64px); }
+  .inv-items { font-size: clamp(8.5px, 2.6vw, 13px); }
+  .inv-items th { font-size: clamp(8.5px, 2.6vw, 13px); padding: 2px 3px; }
+  .inv-items td { padding: 2px 3px; }
+  .inv-items .empty td { height: 16px; }
+  .inv-totals { font-size: clamp(10px, 3vw, 15px); flex-wrap: wrap; gap: 5px; padding: 4px 5px; }
+  .inv-totals .tbox { padding: 2px 8px; }
+  .inv-totals img { width: 44px; height: 44px; }
+  .inv-foot { font-size: clamp(8px, 2.4vw, 12px); flex-wrap: wrap; gap: 4px; padding: 4px 6px; }
+  .inv-notes { font-size: 11px; min-height: 22px; }
+  .print-actions { flex-wrap: wrap; padding: 10px; }
 }
 
 /* أرقام عربية بخط واضح في الفاتورة */

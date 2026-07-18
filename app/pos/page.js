@@ -142,7 +142,12 @@ export default function PosPage() {
       date: todayISO(),
       type: 'بيع',
       payment,
-      customer: { name: customerName || 'عميل نقدي', phone: customerPhone },
+      customer: {
+        name: customerName || 'عميل نقدي',
+        phone: customerPhone,
+        number: Math.max(1, customers.findIndex((c) => c.name === customerName) + 1),
+        address: customers.find((c) => c.name === customerName)?.address || '',
+      },
       items,
       totals: {
         subtotal,
@@ -400,6 +405,9 @@ export default function PosPage() {
                 <div className="badge green" style={{ textAlign: 'center', padding: 8 }}>
                   ✅ تم حفظ فاتورة رقم {num(saved.number, ar)}
                 </div>
+                <button className="btn-primary" style={{ justifyContent: 'center' }} onClick={() => router.push(`/print/${saved.id}`)}>
+                  👁️ معاينة الفاتورة
+                </button>
                 <button className="btn-accent" style={{ justifyContent: 'center' }} onClick={() => router.push(`/print/${saved.id}?auto=1`)}>
                   🖨️ طباعة الفاتورة
                 </button>
