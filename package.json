@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
+    "jsbarcode": "^3.11.6",
     "next": "14.2.15",
     "pdfjs-dist": "^4.7.76",
     "qrcode": "^1.5.4",

@@ -1,0 +1,15 @@
+{
+  "name": "السقا للأدوات المنزلية — نظام الكاشير",
+  "short_name": "السقا POS",
+  "description": "برنامج كاشير ونقطة بيع متكامل لشركة السقا للأدوات المنزلية",
+  "start_url": "/",
+  "display": "standalone",
+  "dir": "rtl",
+  "lang": "ar",
+  "background_color": "#142942",
+  "theme_color": "#f26a1b",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

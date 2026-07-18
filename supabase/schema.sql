@@ -19,6 +19,24 @@ create table if not exists invoices (
   updated_at timestamptz default now()
 );
 
+create table if not exists payments (
+  id text primary key,
+  data jsonb not null,
+  updated_at timestamptz default now()
+);
+
+create table if not exists daycloses (
+  id text primary key,
+  data jsonb not null,
+  updated_at timestamptz default now()
+);
+
+create table if not exists audit (
+  id text primary key,
+  data jsonb not null,
+  updated_at timestamptz default now()
+);
+
 create table if not exists settings (
   id text primary key,
   data jsonb not null,
@@ -30,7 +48,19 @@ create table if not exists settings (
 alter table products enable row level security;
 alter table customers enable row level security;
 alter table invoices enable row level security;
+alter table payments enable row level security;
+alter table daycloses enable row level security;
+alter table audit enable row level security;
 alter table settings enable row level security;
+
+drop policy if exists "allow all payments" on payments;
+create policy "allow all payments" on payments for all using (true) with check (true);
+
+drop policy if exists "allow all daycloses" on daycloses;
+create policy "allow all daycloses" on daycloses for all using (true) with check (true);
+
+drop policy if exists "allow all audit" on audit;
+create policy "allow all audit" on audit for all using (true) with check (true);
 
 drop policy if exists "allow all products" on products;
 create policy "allow all products" on products for all using (true) with check (true);

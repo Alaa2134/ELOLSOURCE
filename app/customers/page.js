@@ -82,6 +82,10 @@ export default function CustomersPage() {
                     <td>{num(st.total, ar)} {settings.currency}</td>
                     <td>{st.debt > 0 ? <span className="badge red">{num(st.debt, ar)}</span> : <span className="badge green">لا يوجد</span>}</td>
                     <td style={{ display: 'flex', gap: 6 }}>
+                      <a className="btn btn-sm" href={`/statement?name=${encodeURIComponent(c.name)}`}>📄 كشف</a>
+                      {st.debt > 0 && (
+                        <a className="btn btn-sm btn-accent" href={`/payments?name=${encodeURIComponent(c.name)}`}>💵 تحصيل</a>
+                      )}
                       {c.phone && (
                         <a className="btn btn-sm btn-green" target="_blank" rel="noreferrer"
                           href={waMeLink(c.phone, `أهلاً ${c.name} 🌹 معك ${settings.companyName}`)}>💬</a>

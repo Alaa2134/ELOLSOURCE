@@ -8,18 +8,30 @@ import { fmtDate } from '@/lib/format';
 const NAV = [
   { href: '/pos', label: '🧾 فاتورة بيع', title: 'فاتورة بيع' },
   { href: '/', label: '📊 لوحة التحكم', title: 'لوحة التحكم', admin: true },
+  { href: '/payments', label: '💵 سند قبض', title: 'سند قبض' },
   { href: '/invoices', label: '📁 الفواتير', title: 'الفواتير' },
+  { href: '/statement', label: '📄 كشف حساب', title: 'كشف حساب عميل' },
   { href: '/products', label: '📦 الأصناف والمخزون', title: 'الأصناف والمخزون' },
   { href: '/customers', label: '👥 العملاء', title: 'العملاء' },
+  { href: '/barcodes', label: '🏷️ استيكر باركود', title: 'استيكر باركود' },
+  { href: '/dayclose', label: '🧮 إقفال يومية', title: 'إقفال يومية' },
   { href: '/inquiry', label: '📱 استعلام أسعار', title: 'استعلام أسعار' },
   { href: '/reports', label: '📈 التقارير', title: 'التقارير', admin: true, perm: 'cashierReports' },
+  { href: '/audit', label: '📜 سجل العمليات', title: 'سجل العمليات', admin: true, strict: true },
   { href: '/whatsapp', label: '💬 واتساب', title: 'واتساب', admin: true, perm: 'cashierWhatsapp' },
   { href: '/settings', label: '⚙️ الإعدادات', title: 'الإعدادات', admin: true },
   { href: '/admin', label: '👑 لوحة الأدمن', title: 'لوحة الأدمن', admin: true, strict: true },
 ];
 
 // صفحات للأدمن فقط (الكاشير بيتحول لشاشة البيع) — perm بتسمح للكاشير لو الأدمن فعّلها
-const ADMIN_PAGES = { '/': null, '/reports': 'cashierReports', '/whatsapp': 'cashierWhatsapp', '/settings': null, '/admin': null };
+const ADMIN_PAGES = {
+  '/': null,
+  '/reports': 'cashierReports',
+  '/whatsapp': 'cashierWhatsapp',
+  '/settings': null,
+  '/admin': null,
+  '/audit': null,
+};
 
 export default function Shell({ children }) {
   const pathname = usePathname();
@@ -58,6 +70,10 @@ export default function Shell({ children }) {
     }
     setReady(true);
     syncPull();
+    // تسجيل الـ Service Worker (تطبيق PWA + شغل بدون إنترنت)
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
     const t = setInterval(() => flushPending(), 30000);
     return () => clearInterval(t);
   }, [pathname, bare, router]);
