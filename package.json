@@ -4,13 +4,16 @@
   "private": true,
   "description": "برنامج كاشير السقا للأدوات المنزلية - نقطة بيع متكاملة",
   "scripts": {
+    "predev": "node scripts/copy-pdf-worker.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/copy-pdf-worker.mjs",
     "build": "next build",
     "start": "next start"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
     "next": "14.2.15",
+    "pdfjs-dist": "^4.7.76",
     "qrcode": "^1.5.4",
     "react": "18.3.1",
     "react-dom": "18.3.1"

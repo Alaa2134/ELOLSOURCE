@@ -9,3 +9,4 @@ whatsapp-gateway/auth/
 whatsapp-gateway/.env
 *.log
 .DS_Store
+public/pdf.worker.min.mjs

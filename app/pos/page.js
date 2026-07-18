@@ -9,15 +9,20 @@ import {
   saveInvoice,
   nextInvoiceNumber,
   getSettings,
+  customerDebt,
+  settleCustomerDebt,
+  getRole,
 } from '@/lib/db';
 import { num, todayISO, fmtDate, normalizePhone } from '@/lib/format';
 import { buildMessage, invoiceLink, waMeLink, gatewaySend, gatewayStatus } from '@/lib/wa';
+import ProductPicker from '@/components/ProductPicker';
 
 const emptyRow = () => ({ code: '', name: '', qty: 1, price: '', disc: 0, notes: '' });
 
 export default function PosPage() {
   const router = useRouter();
   const [settings, setSettings] = useState(null);
+  const [role, setRole] = useState('cashier');
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [rows, setRows] = useState([emptyRow()]);
@@ -27,33 +32,45 @@ export default function PosPage() {
   const [customerPhone, setCustomerPhone] = useState('');
   const [extraDisc, setExtraDisc] = useState(0);
   const [paid, setPaid] = useState('');
-  const [saved, setSaved] = useState(null); // الفاتورة بعد الحفظ
+  const [prevDebt, setPrevDebt] = useState(0); // مديونية العميل السابقة
+  const [includeDebt, setIncludeDebt] = useState(false); // إضافتها للفاتورة
+  const [saved, setSaved] = useState(null);
   const [toast, setToast] = useState('');
   const tableRef = useRef(null);
 
   useEffect(() => {
     setSettings(getSettings());
+    setRole(getRole() || 'cashier');
     setProducts(listProducts());
     setCustomers(listCustomers());
     setNumber(nextInvoiceNumber());
   }, []);
+
+  // تنبيه المديونية عند اختيار العميل
+  useEffect(() => {
+    setPrevDebt(customerName ? customerDebt(customerName) : 0);
+    setIncludeDebt(false);
+  }, [customerName]);
 
   function showToast(msg) {
     setToast(msg);
     setTimeout(() => setToast(''), 3500);
   }
 
+  const canPrice = role === 'admin' || settings?.perms?.allowPriceEdit;
+  const canDisc = role === 'admin' || settings?.perms?.allowDiscount;
+
   const lineTotal = (r) => Math.max(0, (Number(r.qty) || 0) * (Number(r.price) || 0) - (Number(r.disc) || 0));
   const subtotal = useMemo(() => rows.reduce((s, r) => s + (Number(r.qty) || 0) * (Number(r.price) || 0), 0), [rows]);
   const lineDiscs = useMemo(() => rows.reduce((s, r) => s + (Number(r.disc) || 0), 0), [rows]);
-  const net = Math.max(0, subtotal - lineDiscs - (Number(extraDisc) || 0));
+  const debtAdd = includeDebt ? prevDebt : 0;
+  const net = Math.max(0, subtotal - lineDiscs - (Number(extraDisc) || 0)) + debtAdd;
   const paidNum = paid === '' ? (payment === 'نقدي' ? net : 0) : Number(paid) || 0;
   const remaining = net - paidNum;
 
   function updateRow(i, patch) {
     setRows((prev) => {
       const next = prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r));
-      // صف جديد تلقائي لما آخر صف يتملي
       const last = next[next.length - 1];
       if (last.code || last.name) next.push(emptyRow());
       return next;
@@ -67,19 +84,12 @@ export default function PosPage() {
     });
   }
 
-  // البحث بالكود أو الباركود (يدعم ماسح الباركود)
   function lookupCode(i, code) {
     const p = findProduct(code);
     if (p) {
       updateRow(i, { code: p.code, name: p.name, price: p.price });
       focusCell(i, 'qty');
     }
-  }
-
-  function lookupName(i, name) {
-    const p = products.find((x) => x.name === name);
-    if (p) updateRow(i, { code: p.code, name: p.name, price: p.price });
-    else updateRow(i, { name });
   }
 
   function focusCell(row, col) {
@@ -90,10 +100,12 @@ export default function PosPage() {
   }
 
   const COLS = ['code', 'name', 'qty', 'price', 'disc'];
+  // Enter أو المسطرة (Space) للتنقل بين الخانات — وآخر خانة تنزل للصف اللي تحت
   function onKey(e, r, c) {
-    if (e.key !== 'Enter') return;
+    const spaceNav = e.key === ' ' && c !== 'name'; // المسطرة في خانة الاسم بتكتب مسافة عادي
+    if (e.key !== 'Enter' && !spaceNav) return;
     e.preventDefault();
-    if (c === 'code') { lookupCode(r, e.target.value); return; }
+    if (c === 'code' && e.target.value) { lookupCode(r, e.target.value); return; }
     const ci = COLS.indexOf(c);
     if (ci < COLS.length - 1) focusCell(r, COLS[ci + 1]);
     else focusCell(r + 1, 'code');
@@ -117,9 +129,8 @@ export default function PosPage() {
         notes: r.notes || '',
         total: lineTotal(r),
       }));
-    if (!items.length) { showToast('⚠️ أضف صنف واحد على الأقل'); return; }
+    if (!items.length && !debtAdd) { showToast('⚠️ أضف صنف واحد على الأقل'); return; }
 
-    // حفظ العميل تلقائياً لو جديد ومعاه رقم
     if (customerName && !customers.find((c) => c.name === customerName)) {
       saveCustomer({ name: customerName, phone: customerPhone, address: '' });
     } else if (customerName && customerPhone) {
@@ -134,14 +145,22 @@ export default function PosPage() {
       payment,
       customer: { name: customerName || 'عميل نقدي', phone: customerPhone },
       items,
-      totals: { subtotal, discount: lineDiscs + (Number(extraDisc) || 0), net, paid: paidNum, remaining },
+      totals: {
+        subtotal,
+        discount: lineDiscs + (Number(extraDisc) || 0),
+        prevBalance: debtAdd,
+        net,
+        paid: paidNum,
+        remaining,
+      },
     });
+    // لو ضفنا الحساب السابق، نصفّي الفواتير القديمة (الدين بقى متسجل هنا)
+    if (debtAdd > 0) settleCustomerDebt(customerName, inv.number, inv.id);
     setSaved(inv);
     setProducts(listProducts());
     setCustomers(listCustomers());
     showToast(`✅ تم حفظ الفاتورة رقم ${inv.number}`);
 
-    // إرسال واتساب تلقائي عبر البوابة لو مفعّل
     const wa = settings?.wa || {};
     if (wa.autoSend && wa.gatewayUrl && customerPhone) {
       try {
@@ -177,6 +196,8 @@ export default function PosPage() {
     setPaid('');
     setPayment('نقدي');
     setSaved(null);
+    setPrevDebt(0);
+    setIncludeDebt(false);
     setNumber(nextInvoiceNumber());
     focusCell(0, 'code');
   }
@@ -186,7 +207,11 @@ export default function PosPage() {
 
   return (
     <div>
-      <div className="pos-banner"><h2>فـاتـورة بـيـع</h2></div>
+      <div className="pos-banner">
+        <img src="/logo.jpg" alt="" className="banner-logo" />
+        <h2>فـاتـورة بـيـع</h2>
+        <img src="/logo.jpg" alt="" className="banner-logo" />
+      </div>
 
       <div className="pos-wrap">
         <div className="card" style={{ marginBottom: 0 }}>
@@ -218,7 +243,7 @@ export default function PosPage() {
               />
             </label>
           </div>
-          <label className="field" style={{ marginBottom: 12 }}>
+          <label className="field" style={{ marginBottom: 8 }}>
             <span>اسم العميل</span>
             <input
               list="customers-list"
@@ -231,7 +256,23 @@ export default function PosPage() {
             </datalist>
           </label>
 
-          <div style={{ overflowX: 'auto' }}>
+          {prevDebt > 0 && !saved && (
+            <div className={`debt-alert ${includeDebt ? 'ok' : ''}`}>
+              {includeDebt ? (
+                <>
+                  ✅ تم إضافة الحساب السابق (<b>{num(prevDebt, ar)} {settings.currency}</b>) للفاتورة
+                  <button className="btn-sm" onClick={() => setIncludeDebt(false)}>إلغاء</button>
+                </>
+              ) : (
+                <>
+                  ⚠️ تنبيه: العميل <b>{customerName}</b> عليه حساب سابق <b>{num(prevDebt, ar)} {settings.currency}</b>
+                  <button className="btn-sm btn-red" onClick={() => setIncludeDebt(true)}>➕ إضافة للفاتورة</button>
+                </>
+              )}
+            </div>
+          )}
+
+          <div style={{ overflowX: 'visible' }}>
             <table className="pos-grid" ref={tableRef}>
               <thead>
                 <tr>
@@ -240,7 +281,7 @@ export default function PosPage() {
                   <th>اسم الصنف</th>
                   <th style={{ width: 70 }}>الكمية</th>
                   <th style={{ width: 90 }}>السعر</th>
-                  <th style={{ width: 80 }}>خصم</th>
+                  {canDisc && <th style={{ width: 80 }}>خصم</th>}
                   <th style={{ width: 100 }}>الإجمالي</th>
                   <th style={{ width: 40 }}></th>
                 </tr>
@@ -261,13 +302,14 @@ export default function PosPage() {
                       />
                     </td>
                     <td>
-                      <input
-                        list="products-list"
-                        data-r={i} data-c="name"
+                      <ProductPicker
+                        dataR={i} dataC="name"
                         value={r.name}
-                        onChange={(e) => lookupName(i, e.target.value)}
-                        onKeyDown={(e) => onKey(e, i, 'name')}
-                        placeholder="ابحث بالاسم..."
+                        products={products}
+                        arabicDigits={ar}
+                        onType={(v) => updateRow(i, { name: v })}
+                        onSelect={(p) => { updateRow(i, { code: p.code, name: p.name, price: p.price }); focusCell(i, 'qty'); }}
+                        onNavKey={(e) => onKey(e, i, 'name')}
                       />
                     </td>
                     <td>
@@ -284,19 +326,22 @@ export default function PosPage() {
                         className="num" type="number" min="0" step="any"
                         data-r={i} data-c="price"
                         value={r.price}
+                        readOnly={!canPrice}
                         onChange={(e) => updateRow(i, { price: e.target.value })}
                         onKeyDown={(e) => onKey(e, i, 'price')}
                       />
                     </td>
-                    <td>
-                      <input
-                        className="num" type="number" min="0" step="any"
-                        data-r={i} data-c="disc"
-                        value={r.disc}
-                        onChange={(e) => updateRow(i, { disc: e.target.value })}
-                        onKeyDown={(e) => onKey(e, i, 'disc')}
-                      />
-                    </td>
+                    {canDisc && (
+                      <td>
+                        <input
+                          className="num" type="number" min="0" step="any"
+                          data-r={i} data-c="disc"
+                          value={r.disc}
+                          onChange={(e) => updateRow(i, { disc: e.target.value })}
+                          onKeyDown={(e) => onKey(e, i, 'disc')}
+                        />
+                      </td>
+                    )}
                     <td className="total-cell">{num(lineTotal(r), ar)}</td>
                     <td style={{ textAlign: 'center' }}>
                       <button className="btn-sm btn-red" tabIndex={-1} onClick={() => removeRow(i)}>✕</button>
@@ -305,31 +350,33 @@ export default function PosPage() {
                 ))}
               </tbody>
             </table>
-            <datalist id="products-list">
-              {products.map((p) => <option key={p.id} value={p.name}>{`كود ${p.code} — ${num(p.price)} ج`}</option>)}
-            </datalist>
           </div>
           <p className="muted" style={{ marginTop: 8, fontSize: 12 }}>
-            💡 اكتب الكود واضغط Enter (أو امسح الباركود) وهيجيب الصنف والسعر تلقائياً — Enter بينقلك بين الخانات.
+            💡 اكتب الكود أو الاسم وهتظهر الاقتراحات — Enter أو المسطرة بينقلوك بين الخانات، وآخر خانة بتنزل للسطر الجديد.
           </p>
         </div>
 
         <div className="pos-side">
           <div className="box pos-totals">
             <div className="row"><span>الإجمالي</span><b>{num(subtotal, ar)} {settings.currency}</b></div>
-            <div className="row"><span>خصم الأصناف</span><b className="red-text">{num(lineDiscs, ar)}</b></div>
-            <div className="row" style={{ alignItems: 'center' }}>
-              <span>خصم إضافي</span>
-              <input
-                type="number" min="0" step="any"
-                style={{ width: 90, textAlign: 'center' }}
-                value={extraDisc}
-                onChange={(e) => setExtraDisc(e.target.value)}
-              />
-            </div>
+            {canDisc && <div className="row"><span>خصم الأصناف</span><b className="red-text">{num(lineDiscs, ar)}</b></div>}
+            {canDisc && (
+              <div className="row" style={{ alignItems: 'center' }}>
+                <span>خصم إضافي</span>
+                <input
+                  type="number" min="0" step="any"
+                  style={{ width: 90, textAlign: 'center' }}
+                  value={extraDisc}
+                  onChange={(e) => setExtraDisc(e.target.value)}
+                />
+              </div>
+            )}
+            {debtAdd > 0 && (
+              <div className="row"><span>حساب سابق</span><b className="red-text">+{num(debtAdd, ar)}</b></div>
+            )}
             <div className="row big"><span>الصافي</span><span>{num(net, ar)} {settings.currency}</span></div>
             <div className="row" style={{ alignItems: 'center', marginTop: 6 }}>
-              <span>المدفوع</span>
+              <span>المدفوع نقدي</span>
               <input
                 type="number" min="0" step="any"
                 style={{ width: 110, textAlign: 'center' }}
@@ -338,7 +385,7 @@ export default function PosPage() {
               />
             </div>
             <div className="row">
-              <span>{remaining >= 0 ? 'الباقي على العميل' : 'الباقي للعميل'}</span>
+              <span>{remaining >= 0 ? 'الباقي آجل على العميل' : 'الباقي للعميل'}</span>
               <b className={remaining > 0 ? 'red-text' : 'green-text'}>{num(Math.abs(remaining), ar)}</b>
             </div>
           </div>

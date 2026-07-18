@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { listInvoices, deleteInvoice, getSettings } from '@/lib/db';
+import { listInvoices, deleteInvoice, getSettings, isAdmin } from '@/lib/db';
 import { num, fmtDate, fmtTime } from '@/lib/format';
 import { waMeLink, buildMessage, invoiceLink } from '@/lib/wa';
 
@@ -75,17 +75,19 @@ export default function InvoicesPage() {
                   {i.customer?.phone && (
                     <a className="btn btn-sm btn-green" target="_blank" rel="noreferrer" href={waMeLink(i.customer.phone, waMsg(i))}>💬</a>
                   )}
-                  <button
-                    className="btn-sm btn-red"
-                    onClick={() => {
-                      if (confirm(`حذف الفاتورة رقم ${i.number}؟ سيتم إرجاع الكميات للمخزون.`)) {
-                        deleteInvoice(i.id);
-                        reload();
-                      }
-                    }}
-                  >
-                    🗑️
-                  </button>
+                  {(isAdmin() || settings.perms?.allowDeleteInvoice) && (
+                    <button
+                      className="btn-sm btn-red"
+                      onClick={() => {
+                        if (confirm(`حذف الفاتورة رقم ${i.number}؟ سيتم إرجاع الكميات للمخزون.`)) {
+                          deleteInvoice(i.id);
+                          reload();
+                        }
+                      }}
+                    >
+                      🗑️
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

@@ -46,10 +46,7 @@ export default function InvoiceDoc({ invoice, settings, qrDataUrl }) {
             <div className="tm">{fmtTime(invoice.date, ar)}</div>
           </div>
           <div className="logo-print">
-            <div className="circ">
-              {settings.logoText || 'A'}
-              <small>lska</small>
-            </div>
+            <img src="/logo.jpg" alt="ALSAKA" />
           </div>
         </div>
 
@@ -88,6 +85,7 @@ export default function InvoiceDoc({ invoice, settings, qrDataUrl }) {
         <div className="inv-totals">
           <div className="tbox">الإجمالي: {num(t.subtotal ?? 0, ar)} {settings.currency}</div>
           {(t.discount || 0) > 0 && <div className="tbox">الخصم: {num(t.discount, ar)}</div>}
+          {(t.prevBalance || 0) > 0 && <div className="tbox">حساب سابق: {num(t.prevBalance, ar)}</div>}
           <div className="tbox" style={{ background: '#eee' }}>الصافي: {num(t.net ?? 0, ar)} {settings.currency}</div>
           {(t.remaining || 0) > 0 && <div className="tbox">المتبقي: {num(t.remaining, ar)}</div>}
           {qrDataUrl && (

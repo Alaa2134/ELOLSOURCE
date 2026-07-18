@@ -2,29 +2,38 @@
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { getSettings, seedIfEmpty, syncPull, cloudEnabled, flushPending } from '@/lib/db';
+import { getSettings, seedIfEmpty, syncPull, cloudEnabled, flushPending, getRole } from '@/lib/db';
 import { fmtDate } from '@/lib/format';
 
 const NAV = [
   { href: '/pos', label: '🧾 فاتورة بيع', title: 'فاتورة بيع' },
-  { href: '/', label: '📊 لوحة التحكم', title: 'لوحة التحكم' },
+  { href: '/', label: '📊 لوحة التحكم', title: 'لوحة التحكم', admin: true },
   { href: '/invoices', label: '📁 الفواتير', title: 'الفواتير' },
   { href: '/products', label: '📦 الأصناف والمخزون', title: 'الأصناف والمخزون' },
   { href: '/customers', label: '👥 العملاء', title: 'العملاء' },
-  { href: '/reports', label: '📈 التقارير', title: 'التقارير' },
-  { href: '/whatsapp', label: '💬 واتساب', title: 'واتساب' },
-  { href: '/settings', label: '⚙️ الإعدادات', title: 'الإعدادات' },
+  { href: '/inquiry', label: '📱 استعلام أسعار', title: 'استعلام أسعار' },
+  { href: '/reports', label: '📈 التقارير', title: 'التقارير', admin: true, perm: 'cashierReports' },
+  { href: '/whatsapp', label: '💬 واتساب', title: 'واتساب', admin: true, perm: 'cashierWhatsapp' },
+  { href: '/settings', label: '⚙️ الإعدادات', title: 'الإعدادات', admin: true },
+  { href: '/admin', label: '👑 لوحة الأدمن', title: 'لوحة الأدمن', admin: true, strict: true },
 ];
+
+// صفحات للأدمن فقط (الكاشير بيتحول لشاشة البيع) — perm بتسمح للكاشير لو الأدمن فعّلها
+const ADMIN_PAGES = { '/': null, '/reports': 'cashierReports', '/whatsapp': 'cashierWhatsapp', '/settings': null, '/admin': null };
 
 export default function Shell({ children }) {
   const pathname = usePathname();
   const router = useRouter();
   const [ready, setReady] = useState(false);
   const [cloud, setCloud] = useState(false);
+  const [role, setRole] = useState('');
 
-  // صفحات بدون قائمة جانبية (عرض عام / طباعة / دخول)
+  // صفحات بدون قائمة جانبية (عرض عام / طباعة / دخول / استعلام)
   const bare =
-    pathname.startsWith('/inv/') || pathname.startsWith('/print/') || pathname === '/login';
+    pathname.startsWith('/inv/') ||
+    pathname.startsWith('/print/') ||
+    pathname === '/login' ||
+    pathname === '/inquiry';
 
   useEffect(() => {
     seedIfEmpty();
@@ -34,6 +43,17 @@ export default function Shell({ children }) {
       if (!authed) {
         router.replace('/login');
         return;
+      }
+      const r = getRole();
+      setRole(r);
+      // حماية صفحات الأدمن
+      if (r !== 'admin' && pathname in ADMIN_PAGES) {
+        const perm = ADMIN_PAGES[pathname];
+        const allowed = perm && getSettings().perms?.[perm];
+        if (!allowed) {
+          router.replace('/pos');
+          return;
+        }
       }
     }
     setReady(true);
@@ -47,19 +67,25 @@ export default function Shell({ children }) {
 
   const current = NAV.find((n) => n.href === pathname);
   const s = getSettings();
+  const visibleNav = NAV.filter((n) => {
+    if (!n.admin) return true;
+    if (role === 'admin') return true;
+    if (n.strict) return false;
+    return n.perm && s.perms?.[n.perm];
+  });
 
   return (
     <div className="shell">
       <aside className="sidebar no-print">
         <div className="logo">
-          <div className="logo-circle">{s.logoText || 'A'}</div>
+          <img src="/logo.jpg" alt="ALSAKA" className="logo-img" />
           <div>
             <h1>{s.companyName}</h1>
-            <small>نظام الكاشير المتكامل</small>
+            <small>{role === 'admin' ? '👑 أدمن' : '💼 كاشير'} — نظام الكاشير</small>
           </div>
         </div>
         <nav>
-          {NAV.map((n) => (
+          {visibleNav.map((n) => (
             <Link key={n.href} href={n.href} className={pathname === n.href ? 'active' : ''}>
               {n.label}
             </Link>
@@ -78,6 +104,7 @@ export default function Shell({ children }) {
               className="btn-sm"
               onClick={() => {
                 sessionStorage.removeItem('saqqa_authed');
+                sessionStorage.removeItem('saqqa_role');
                 router.replace('/login');
               }}
             >

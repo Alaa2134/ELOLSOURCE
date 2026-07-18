@@ -1,7 +1,8 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { listProducts, saveProduct, deleteProduct, getSettings } from '@/lib/db';
 import { num } from '@/lib/format';
+import { parsePdfProducts } from '@/lib/pdfImport';
 
 const empty = { code: '', name: '', price: '', cost: '', stock: '', barcode: '', category: 'أدوات منزلية' };
 
@@ -13,6 +14,9 @@ export default function ProductsPage() {
   const [showImport, setShowImport] = useState(false);
   const [importText, setImportText] = useState('');
   const [msg, setMsg] = useState('');
+  const [pdfRows, setPdfRows] = useState(null); // معاينة منتجات الـ PDF قبل الإضافة
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const pdfRef = useRef(null);
 
   function reload() {
     setProducts(listProducts());
@@ -64,6 +68,45 @@ export default function ProductsPage() {
     reload();
   }
 
+  async function onPdfFile(e) {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) return;
+    setPdfBusy(true);
+    setMsg('');
+    try {
+      const rows = await parsePdfProducts(f);
+      if (!rows.length) {
+        setMsg('❌ معرفتش أطلع منتجات من الملف ده — جرب ملف فيه جدول أصناف واضح');
+      } else {
+        setPdfRows(rows.map((r) => ({ ...r, checked: true })));
+      }
+    } catch (err) {
+      setMsg('❌ فشل قراءة الـ PDF: ' + err.message);
+    }
+    setPdfBusy(false);
+  }
+
+  function importPdfRows() {
+    let count = 0;
+    for (const r of pdfRows) {
+      if (!r.checked || !r.name) continue;
+      const existing = products.find((p) => String(p.code) === String(r.code));
+      saveProduct({
+        ...(existing || {}),
+        code: r.code || r.name.slice(0, 10),
+        name: r.name,
+        price: Number(r.price) || 0,
+        cost: existing?.cost || 0,
+        stock: existing?.stock || 0,
+      });
+      count++;
+    }
+    setPdfRows(null);
+    setMsg(`✅ تم استيراد ${count} صنف من الـ PDF`);
+    reload();
+  }
+
   function exportCsv() {
     const rows = [['code', 'name', 'price', 'cost', 'stock', 'barcode']];
     for (const p of products) rows.push([p.code, p.name, p.price, p.cost || 0, p.stock || 0, p.barcode || '']);
@@ -104,10 +147,49 @@ export default function ProductsPage() {
           <input style={{ maxWidth: 300 }} placeholder="🔍 بحث بالاسم أو الكود أو الباركود" value={q} onChange={(e) => setQ(e.target.value)} />
           <span className="muted">{num(filtered.length, ar)} صنف</span>
           <div style={{ marginRight: 'auto', display: 'flex', gap: 8 }}>
+            <button className="btn-accent" onClick={() => pdfRef.current?.click()} disabled={pdfBusy}>
+              {pdfBusy ? '⏳ جاري التحليل...' : '📄 استيراد من PDF'}
+            </button>
+            <input ref={pdfRef} type="file" accept=".pdf" hidden onChange={onPdfFile} />
             <button onClick={() => setShowImport(!showImport)}>📥 استيراد من إكسل</button>
             <button onClick={exportCsv}>📤 تصدير CSV</button>
           </div>
         </div>
+
+        {pdfRows && (
+          <div style={{ marginBottom: 12, background: '#fff8f2', border: '1px solid var(--accent)', padding: 12, borderRadius: 8 }}>
+            <h3 style={{ marginBottom: 8 }}>📄 معاينة منتجات الـ PDF ({pdfRows.length}) — راجع وعدّل قبل الإضافة</h3>
+            <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+              <table className="tbl">
+                <thead>
+                  <tr><th></th><th>الكود</th><th>الاسم</th><th>السعر</th></tr>
+                </thead>
+                <tbody>
+                  {pdfRows.map((r, i) => (
+                    <tr key={i}>
+                      <td>
+                        <input type="checkbox" style={{ width: 'auto' }} checked={r.checked}
+                          onChange={(e) => setPdfRows(pdfRows.map((x, xi) => xi === i ? { ...x, checked: e.target.checked } : x))} />
+                      </td>
+                      <td><input style={{ width: 90 }} value={r.code}
+                        onChange={(e) => setPdfRows(pdfRows.map((x, xi) => xi === i ? { ...x, code: e.target.value } : x))} /></td>
+                      <td><input value={r.name}
+                        onChange={(e) => setPdfRows(pdfRows.map((x, xi) => xi === i ? { ...x, name: e.target.value } : x))} /></td>
+                      <td><input style={{ width: 90 }} type="number" step="any" value={r.price}
+                        onChange={(e) => setPdfRows(pdfRows.map((x, xi) => xi === i ? { ...x, price: e.target.value } : x))} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+              <button className="btn-green" onClick={importPdfRows}>
+                ✅ إضافة المحدد ({pdfRows.filter((r) => r.checked).length})
+              </button>
+              <button className="btn-red" onClick={() => setPdfRows(null)}>إلغاء</button>
+            </div>
+          </div>
+        )}
 
         {showImport && (
           <div style={{ marginBottom: 12, background: '#f7f9fb', padding: 12, borderRadius: 8 }}>
