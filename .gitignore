@@ -1,0 +1,11 @@
+node_modules/
+.next/
+out/
+.env
+.env.local
+.vercel
+whatsapp-gateway/node_modules/
+whatsapp-gateway/auth/
+whatsapp-gateway/.env
+*.log
+.DS_Store
