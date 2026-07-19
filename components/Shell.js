@@ -71,7 +71,6 @@ export default function Shell({ children }) {
     pathname === '/catalog';
 
   useEffect(() => {
-    seedIfEmpty();
     setCloud(cloudEnabled());
     if (!bare) {
       const authed = sessionStorage.getItem('saqqa_authed') === '1';
@@ -87,7 +86,11 @@ export default function Shell({ children }) {
         return;
       }
     }
-    setReady(true);
+    // تحميل قائمة الأصناف الكاملة أول مرة قبل عرض الشاشات
+    (async () => {
+      await seedIfEmpty();
+      setReady(true);
+    })();
     syncPull();
     runDailyBackup();
     if ('serviceWorker' in navigator) {
