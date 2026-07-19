@@ -55,7 +55,7 @@ export default function CustomersPage() {
             <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></label>
           <label className="field"><span>نوع السعر</span>
             <select value={form.priceType || 'قطاعي'} onChange={(e) => setForm({ ...form, priceType: e.target.value })}>
-              <option>قطاعي</option>
+              <option value="قطاعي">عادي (الحد الأدنى للبيع)</option>
               <option>جملة</option>
               <option>موزع</option>
             </select></label>

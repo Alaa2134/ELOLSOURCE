@@ -162,9 +162,9 @@ export default function ProductsPage() {
             <input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} /></label>
           <label className="field" style={{ gridColumn: 'span 2' }}><span>اسم الصنف</span>
             <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
-          <label className="field"><span>سعر البيع</span>
+          <label className="field"><span>الحد الأدنى للبيع (سعر البيع)</span>
             <input type="number" step="any" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} /></label>
-          <label className="field"><span>سعر التكلفة</span>
+          <label className="field"><span>السعر المبدئي (التكلفة)</span>
             <input type="number" step="any" value={form.cost} onChange={(e) => setForm({ ...form, cost: e.target.value })} /></label>
           <label className="field"><span>المخزون</span>
             <input type="number" step="any" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} /></label>
@@ -262,7 +262,7 @@ export default function ProductsPage() {
         <div style={{ overflowX: 'auto' }}>
           <table className="tbl">
             <thead>
-              <tr><th></th><th>الكود</th><th>اسم الصنف</th><th>قطاعي</th><th>جملة</th><th>التكلفة</th><th>المخزون</th><th>إجراءات</th></tr>
+              <tr><th></th><th>الكود</th><th>اسم الصنف</th><th>الحد الأدنى للبيع</th><th>جملة</th><th>السعر المبدئي</th><th>المخزون</th><th>إجراءات</th></tr>
             </thead>
             <tbody>
               {filtered.map((p) => (

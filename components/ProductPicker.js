@@ -21,7 +21,21 @@ export default function ProductPicker({ value, products, onType, onSelect, onNav
       matches = products.filter((p) => p.name.includes(firstWord)).slice(0, 12);
     }
   } else if (q) {
-    matches = products.filter((p) => p.name.includes(q) || String(p.code).includes(q)).slice(0, 8);
+    // ترتيب ذكي مع كل حرف: اللي بيبدأ بالمكتوب الأول، بعدين بداية كلمة، بعدين الكود، بعدين أي تطابق
+    const score = (p) => {
+      if (p.name.startsWith(q)) return 0;
+      if (p.name.includes(' ' + q)) return 1;
+      if (String(p.code).startsWith(q)) return 2;
+      if (p.name.includes(q)) return 3;
+      if (String(p.code).includes(q)) return 4;
+      return 9;
+    };
+    matches = products
+      .map((p) => ({ p, s: score(p) }))
+      .filter((x) => x.s < 9)
+      .sort((a, b) => a.s - b.s || a.p.name.length - b.p.name.length || a.p.name.localeCompare(b.p.name))
+      .slice(0, 10)
+      .map((x) => x.p);
   }
 
   useEffect(() => setHi(0), [q, similar]);
