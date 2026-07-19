@@ -530,11 +530,31 @@ table.tbl tr:hover td { background: #fef3ec; }
 
 .print-actions { text-align: center; padding: 14px; display: flex; gap: 10px; justify-content: center; }
 
+/* نص ورقة A4 (فواتير قصيرة) */
+.a4.half { min-height: 128mm; }
+
+/* اختيار الطابعة في الشريط العلوي */
+.printer-select {
+  width: auto;
+  max-width: 220px;
+  font-size: 12px;
+  padding: 5px 8px;
+}
+
+.lock-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: rgba(13, 25, 40, .96);
+  backdrop-filter: blur(6px);
+}
+
 @media print {
   body { background: #fff; }
   .sidebar, .topbar, .print-actions, .no-print { display: none !important; }
   .content { padding: 0; }
-  .a4 { width: auto; min-height: 275mm; margin: 0; padding: 0; }
+  .a4 { width: auto; min-height: 272mm; margin: 0; padding: 0; }
+  .a4.half { min-height: auto; }
   .a4-break { page-break-after: always; }
   @page { size: A4; margin: 8mm; }
 }

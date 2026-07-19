@@ -15,7 +15,11 @@ export default function LoginPage() {
       sessionStorage.setItem('saqqa_authed', '1');
       sessionStorage.setItem('saqqa_role', 'admin');
       router.replace('/');
-    } else if (pin === (s.pin || '1234')) {
+    } else if (pin === (s.accountantPassword || '3333')) {
+      sessionStorage.setItem('saqqa_authed', '1');
+      sessionStorage.setItem('saqqa_role', 'accountant');
+      router.replace('/');
+    } else if (pin === (s.pin || '7974')) {
       sessionStorage.setItem('saqqa_authed', '1');
       sessionStorage.setItem('saqqa_role', 'cashier');
       router.replace('/pos');
@@ -30,7 +34,7 @@ export default function LoginPage() {
       <div className="pinbox card">
         <img src="/logo.jpg" alt="ALSAKA" className="login-logo" />
         <h2 style={{ color: 'var(--brand)', marginBottom: 4 }}>السقا للأدوات المنزلية</h2>
-        <p className="muted" style={{ marginBottom: 16 }}>أدخل كلمة السر — كاشير أو أدمن</p>
+        <p className="muted" style={{ marginBottom: 16 }}>أدخل كلمة السر — كاشير أو محاسب أو أدمن</p>
         <form onSubmit={submit}>
           <input
             type="password"

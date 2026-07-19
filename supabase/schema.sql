@@ -25,6 +25,12 @@ create table if not exists payments (
   updated_at timestamptz default now()
 );
 
+create table if not exists expenses (
+  id text primary key,
+  data jsonb not null,
+  updated_at timestamptz default now()
+);
+
 create table if not exists daycloses (
   id text primary key,
   data jsonb not null,
@@ -49,12 +55,16 @@ alter table products enable row level security;
 alter table customers enable row level security;
 alter table invoices enable row level security;
 alter table payments enable row level security;
+alter table expenses enable row level security;
 alter table daycloses enable row level security;
 alter table audit enable row level security;
 alter table settings enable row level security;
 
 drop policy if exists "allow all payments" on payments;
 create policy "allow all payments" on payments for all using (true) with check (true);
+
+drop policy if exists "allow all expenses" on expenses;
+create policy "allow all expenses" on expenses for all using (true) with check (true);
 
 drop policy if exists "allow all daycloses" on daycloses;
 create policy "allow all daycloses" on daycloses for all using (true) with check (true);
@@ -73,3 +83,12 @@ create policy "allow all invoices" on invoices for all using (true) with check (
 
 drop policy if exists "allow all settings" on settings;
 create policy "allow all settings" on settings for all using (true) with check (true);
+
+-- المزامنة اللحظية (Realtime): أي تعديل من جهاز بيوصل لباقي الأجهزة فوراً
+alter publication supabase_realtime add table products;
+alter publication supabase_realtime add table customers;
+alter publication supabase_realtime add table invoices;
+alter publication supabase_realtime add table payments;
+alter publication supabase_realtime add table expenses;
+alter publication supabase_realtime add table daycloses;
+alter publication supabase_realtime add table settings;

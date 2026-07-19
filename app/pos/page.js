@@ -12,6 +12,7 @@ import {
   customerDebt,
   settleCustomerDebt,
   getRole,
+  listReps,
 } from '@/lib/db';
 import { num, todayISO, fmtDate, normalizePhone } from '@/lib/format';
 import { buildMessage, invoiceLink, waMeLink, gatewaySend, gatewayStatus } from '@/lib/wa';
@@ -32,6 +33,8 @@ export default function PosPage() {
   const [customerPhone, setCustomerPhone] = useState('');
   const [extraDisc, setExtraDisc] = useState(0);
   const [paid, setPaid] = useState('');
+  const [rep, setRep] = useState(''); // المندوب اللي هيطلع بالفاتورة
+  const [reps, setReps] = useState([]);
   const [prevDebt, setPrevDebt] = useState(0); // مديونية العميل السابقة
   const [includeDebt, setIncludeDebt] = useState(false); // إضافتها للفاتورة
   const [saved, setSaved] = useState(null);
@@ -43,6 +46,7 @@ export default function PosPage() {
     setRole(getRole() || 'cashier');
     setProducts(listProducts());
     setCustomers(listCustomers());
+    setReps(listReps());
     setNumber(nextInvoiceNumber());
   }, []);
 
@@ -142,6 +146,8 @@ export default function PosPage() {
       date: todayISO(),
       type: 'بيع',
       payment,
+      rep: rep.trim(),
+      repStatus: rep.trim() ? 'مع المندوب' : '',
       customer: {
         name: customerName || 'عميل نقدي',
         phone: customerPhone,
@@ -200,6 +206,8 @@ export default function PosPage() {
     setPaid('');
     setPayment('نقدي');
     setSaved(null);
+    setRep('');
+    setReps(listReps());
     setPrevDebt(0);
     setIncludeDebt(false);
     setNumber(nextInvoiceNumber());
@@ -247,18 +255,32 @@ export default function PosPage() {
               />
             </label>
           </div>
-          <label className="field" style={{ marginBottom: 8 }}>
-            <span>اسم العميل</span>
-            <input
-              list="customers-list"
-              value={customerName}
-              onChange={(e) => selectCustomer(e.target.value)}
-              placeholder="عميل نقدي"
-            />
-            <datalist id="customers-list">
-              {customers.map((c) => <option key={c.id} value={c.name} />)}
-            </datalist>
-          </label>
+          <div className="grid" style={{ gridTemplateColumns: '2fr 1fr', marginBottom: 8 }}>
+            <label className="field">
+              <span>اسم العميل</span>
+              <input
+                list="customers-list"
+                value={customerName}
+                onChange={(e) => selectCustomer(e.target.value)}
+                placeholder="عميل نقدي"
+              />
+              <datalist id="customers-list">
+                {customers.map((c) => <option key={c.id} value={c.name} />)}
+              </datalist>
+            </label>
+            <label className="field">
+              <span>🛵 المندوب (لو الفاتورة هتطلع للتوصيل)</span>
+              <input
+                list="reps-list"
+                value={rep}
+                onChange={(e) => setRep(e.target.value)}
+                placeholder="بدون مندوب"
+              />
+              <datalist id="reps-list">
+                {reps.map((r) => <option key={r} value={r} />)}
+              </datalist>
+            </label>
+          </div>
 
           {prevDebt > 0 && !saved && (
             <div className={`debt-alert ${includeDebt ? 'ok' : ''}`}>

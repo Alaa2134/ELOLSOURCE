@@ -10,3 +10,5 @@ whatsapp-gateway/.env
 *.log
 .DS_Store
 public/pdf.worker.min.mjs
+desktop/node_modules/
+desktop/dist/

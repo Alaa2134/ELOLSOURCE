@@ -1,7 +1,7 @@
 'use client';
 // إقفال اليومية: مقارنة كاش الدرج الفعلي بالمفروض وتسجيل العجز/الزيادة
 import { useEffect, useMemo, useState } from 'react';
-import { listInvoices, listPayments, listDayCloses, saveDayClose, getSettings, getRole } from '@/lib/db';
+import { listInvoices, listPayments, listExpenses, listDayCloses, saveDayClose, getSettings, getRole } from '@/lib/db';
 import { num, fmtDate } from '@/lib/format';
 
 function dayKey(iso) {
@@ -27,8 +27,10 @@ export default function DayClosePage() {
     if (!day) return null;
     const invs = listInvoices().filter((i) => dayKey(i.date) === day);
     const pays = listPayments().filter((p) => dayKey(p.date) === day);
+    const exps = listExpenses().filter((x) => dayKey(x.date) === day);
     const cashInvoices = invs.reduce((s, i) => s + (Number(i.totals?.paid) || 0), 0);
     const cashPayments = pays.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+    const expensesTotal = exps.reduce((s, x) => s + (Number(x.amount) || 0), 0);
     const sales = invs.reduce((s, i) => s + (Number(i.totals?.net) || 0), 0);
     return {
       invCount: invs.length,
@@ -36,7 +38,8 @@ export default function DayClosePage() {
       sales,
       cashInvoices,
       cashPayments,
-      expected: cashInvoices + cashPayments,
+      expensesTotal,
+      expected: cashInvoices + cashPayments - expensesTotal,
     };
   }, [day, closes]);
 
@@ -51,6 +54,7 @@ export default function DayClosePage() {
       day,
       invCount: stats.invCount,
       sales: stats.sales,
+      expenses: stats.expensesTotal,
       expected: stats.expected,
       actual: actualNum,
       diff,
@@ -81,6 +85,7 @@ export default function DayClosePage() {
             <div className="row"><span>إجمالي المبيعات</span><b>{num(stats.sales, ar)} {settings.currency}</b></div>
             <div className="row"><span>المحصل من الفواتير</span><b>{num(stats.cashInvoices, ar)}</b></div>
             <div className="row"><span>المحصل من سندات القبض</span><b>{num(stats.cashPayments, ar)}</b></div>
+            <div className="row"><span>مصاريف اليوم (بتتخصم)</span><b className="red-text">−{num(stats.expensesTotal, ar)}</b></div>
             <div className="row big"><span>المفروض في الدرج</span><span>{num(stats.expected, ar)} {settings.currency}</span></div>
           </div>
           <label className="field" style={{ marginBottom: 10 }}>

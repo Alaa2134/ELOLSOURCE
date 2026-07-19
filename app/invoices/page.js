@@ -56,7 +56,7 @@ export default function InvoicesPage() {
         <table className="tbl">
           <thead>
             <tr>
-              <th>رقم</th><th>التاريخ</th><th>الوقت</th><th>العميل</th><th>الدفع</th>
+              <th>رقم</th><th>التاريخ</th><th>الوقت</th><th>العميل</th><th>المندوب</th><th>الدفع</th>
               <th>الصافي</th><th>المتبقي</th><th>إجراءات</th>
             </tr>
           </thead>
@@ -67,6 +67,7 @@ export default function InvoicesPage() {
                 <td>{fmtDate(i.date, ar)}</td>
                 <td>{fmtTime(i.date, ar)}</td>
                 <td>{i.customer?.name}</td>
+                <td>{i.rep ? <span className="badge blue">🛵 {i.rep}</span> : '—'}</td>
                 <td><span className={`badge ${i.payment === 'نقدي' ? 'green' : 'orange'}`}>{i.payment}</span></td>
                 <td><b>{num(i.totals?.net || 0, ar)}</b></td>
                 <td>{(i.totals?.remaining || 0) > 0 ? <span className="red-text">{num(i.totals.remaining, ar)}</span> : '—'}</td>
@@ -91,7 +92,7 @@ export default function InvoicesPage() {
                 </td>
               </tr>
             ))}
-            {!filtered.length && <tr><td colSpan={8} className="muted">لا توجد فواتير</td></tr>}
+            {!filtered.length && <tr><td colSpan={9} className="muted">لا توجد فواتير</td></tr>}
           </tbody>
         </table>
       </div>

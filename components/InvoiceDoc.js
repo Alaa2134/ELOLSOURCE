@@ -5,9 +5,9 @@
 import { num, fmtDate, fmtDateLong, fmtTime, toArabicDigits } from '@/lib/format';
 
 const ROWS_PER_PAGE = 22; // عدد الأصناف في الصفحة الواحدة
-const MIN_ROWS = 14; // صفوف فاضية لتكملة شكل الجدول
 
-export default function InvoiceDoc({ invoice, settings, qrDataUrl }) {
+// paper: 'a4' عادي — 'a5' نص ورقة للفواتير القصيرة (بدون صفوف فاضية)
+export default function InvoiceDoc({ invoice, settings, qrDataUrl, paper = 'a4' }) {
   const ar = settings.arabicDigits;
   const items = invoice.items || [];
   const t = invoice.totals || {};
@@ -69,10 +69,9 @@ export default function InvoiceDoc({ invoice, settings, qrDataUrl }) {
     <>
       {pages.map((pageItems, pi) => {
         const last = pi === pages.length - 1;
-        const emptyCount = last ? Math.max(0, MIN_ROWS - pageItems.length) : 0;
         const start = pi * ROWS_PER_PAGE;
         return (
-          <div className={`a4 ${last ? '' : 'a4-break'}`} key={pi}>
+          <div className={`a4 ${paper === 'a5' ? 'half' : ''} ${last ? '' : 'a4-break'}`} key={pi}>
             <div className="inv-outer">
               <Header />
               <table className="inv-items">
@@ -97,11 +96,6 @@ export default function InvoiceDoc({ invoice, settings, qrDataUrl }) {
                       <td className="c">{num(it.price, ar)}</td>
                       <td className="c" style={{ fontWeight: 700 }}>{num(it.total, ar)}</td>
                       <td className="c">{it.notes || ''}</td>
-                    </tr>
-                  ))}
-                  {Array.from({ length: emptyCount }).map((_, i) => (
-                    <tr className="empty" key={`e${i}`}>
-                      <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
                     </tr>
                   ))}
                 </tbody>
