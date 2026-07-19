@@ -17,6 +17,22 @@ import {
 import { num, todayISO, fmtDate, normalizePhone } from '@/lib/format';
 import { buildMessage, invoiceLink, waMeLink, gatewaySend, gatewayStatus, notifyAdmin } from '@/lib/wa';
 import ProductPicker from '@/components/ProductPicker';
+import BarcodeScanner from '@/components/BarcodeScanner';
+
+// صفارة تأكيد المسح
+function beep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 1400;
+    gain.gain.value = 0.15;
+    osc.start();
+    osc.stop(ctx.currentTime + 0.12);
+  } catch {}
+}
 
 const emptyRow = () => ({ code: '', name: '', qty: 1, price: '', disc: 0, notes: '', unit: '' });
 
@@ -39,6 +55,7 @@ export default function PosPage() {
   const [includeDebt, setIncludeDebt] = useState(false); // إضافتها للفاتورة
   const [saved, setSaved] = useState(null);
   const [toast, setToast] = useState('');
+  const [scanning, setScanning] = useState(false); // كاميرا الباركود
   const tableRef = useRef(null);
 
   useEffect(() => {
@@ -102,6 +119,32 @@ export default function PosPage() {
       updateRow(i, { code: p.code, name: p.name, price: priceFor(p), unit: '' });
       focusCell(i, 'qty');
     }
+  }
+
+  // مسح بالكاميرا: الصنف بيتضاف — ولو اتمسح تاني الكمية بتزيد
+  function onCameraScan(code) {
+    const p = products.find(
+      (x) => String(x.barcode || '') === code || String(x.code) === code
+    );
+    if (!p) { showToast(`⚠️ الباركود مش متسجل: ${code}`); return; }
+    setRows((prev) => {
+      let next;
+      const i = prev.findIndex((r) => String(r.code) === String(p.code) && r.unit !== 'pack');
+      if (i >= 0) {
+        next = prev.map((r, idx) => (idx === i ? { ...r, qty: (Number(r.qty) || 0) + 1 } : r));
+      } else {
+        next = [...prev];
+        const row = { code: p.code, name: p.name, qty: 1, price: priceFor(p), disc: 0, notes: '', unit: '' };
+        const empty = next.findIndex((r) => !r.code && !r.name);
+        if (empty >= 0) next[empty] = row;
+        else next.push(row);
+      }
+      const last = next[next.length - 1];
+      if (last.code || last.name) next.push(emptyRow());
+      return next;
+    });
+    beep();
+    showToast(`✅ ${p.name}`);
   }
 
   // تبديل الوحدة: قطعة أو عبوة (كرتونة/دستة) — بيغير السعر وخصم المخزون
@@ -448,9 +491,14 @@ export default function PosPage() {
               </tbody>
             </table>
           </div>
-          <p className="muted" style={{ marginTop: 8, fontSize: 12 }}>
-            💡 اكتب الكود أو الاسم وهتظهر الاقتراحات — Enter بينقلك بين الخانات، وآخر خانة بتنزل للسطر الجديد.
-          </p>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>
+            <button className="btn-primary" onClick={() => setScanning(true)}>
+              📷 مسح بالكاميرا
+            </button>
+            <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+              💡 اكتب الكود أو الاسم وهتظهر الاقتراحات — Enter بينقلك بين الخانات — أو امسح الباركود بكاميرا الموبايل.
+            </p>
+          </div>
         </div>
 
         <div className="pos-side">
@@ -526,6 +574,7 @@ export default function PosPage() {
         </div>
       </div>
 
+      {scanning && <BarcodeScanner onScan={onCameraScan} onClose={() => setScanning(false)} />}
       {toast && <div className="toast">{toast}</div>}
     </div>
   );

@@ -11,6 +11,7 @@ import {
   cloudConfigFromHash,
 } from '@/lib/db';
 import { num } from '@/lib/format';
+import BarcodeScanner from '@/components/BarcodeScanner';
 
 export default function InquiryPage() {
   const [authed, setAuthed] = useState(false);
@@ -20,6 +21,7 @@ export default function InquiryPage() {
   const [settings, setSettings] = useState(null);
   const [q, setQ] = useState('');
   const [loading, setLoading] = useState(true);
+  const [scanning, setScanning] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -91,13 +93,30 @@ export default function InquiryPage() {
         >🔒</button>
       </div>
       <div className="inquiry-body">
-        <input
-          className="inquiry-search"
-          placeholder="🔍 اكتب اسم الصنف أو الكود..."
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          autoFocus
-        />
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            className="inquiry-search"
+            style={{ flex: 1 }}
+            placeholder="🔍 اكتب اسم الصنف أو الكود..."
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            autoFocus
+          />
+          <button className="btn-accent" style={{ borderRadius: 12, fontSize: 22, padding: '0 16px' }}
+            title="مسح الباركود بالكاميرا" onClick={() => setScanning(true)}>
+            📷
+          </button>
+        </div>
+        {scanning && (
+          <BarcodeScanner
+            onScan={(code) => {
+              // نبحث بالباركود أو الكود ونعرض النتيجة فوراً
+              const p = products.find((x) => String(x.barcode || '') === code || String(x.code) === code);
+              setQ(p ? String(p.code) : code);
+            }}
+            onClose={() => setScanning(false)}
+          />
+        )}
         <p className="muted" style={{ margin: '8px 2px', fontSize: 13 }}>
           {num(filtered.length, ar)} صنف {!cloudEnabled() && '· 💾 بيانات الجهاز المحلي'}
         </p>
