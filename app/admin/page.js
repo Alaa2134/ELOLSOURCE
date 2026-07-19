@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import QRCode from 'qrcode';
-import { getSettings, saveSettings, listInvoices, runDailyBackup } from '@/lib/db';
+import { getSettings, saveSettings, listInvoices, runDailyBackup, cloudLinkHash } from '@/lib/db';
 import { num } from '@/lib/format';
 
 const PERMS = [
@@ -35,7 +35,8 @@ export default function AdminPage() {
       count: invoices.length,
     });
     const st = getSettings();
-    const url = (st.publicBaseUrl || window.location.origin) + '/inquiry';
+    // الـ QR بيشيل إعداد السحابة معاه — الموبايل بيتظبط تلقائياً أول ما يمسحه
+    const url = (st.publicBaseUrl || window.location.origin) + '/inquiry' + cloudLinkHash();
     QRCode.toDataURL(url, { margin: 1, width: 180 }).then(setPhoneQr).catch(() => {});
   }, []);
 

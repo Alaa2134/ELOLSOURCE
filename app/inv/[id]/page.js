@@ -2,7 +2,7 @@
 // صفحة عامة يفتحها العميل من رابط الواتساب أو QR الفاتورة — بدون تسجيل دخول
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { getInvoice, fetchInvoiceCloud, getSettings, cloudEnabled } from '@/lib/db';
+import { getInvoice, fetchInvoiceCloud, getSettings, cloudEnabled, cloudConfigFromHash } from '@/lib/db';
 import InvoiceDoc from '@/components/InvoiceDoc';
 
 export default function PublicInvoicePage() {
@@ -13,6 +13,7 @@ export default function PublicInvoicePage() {
 
   useEffect(() => {
     (async () => {
+      cloudConfigFromHash(); // رابط الفاتورة بيحمل إعداد السحابة لموبايل العميل تلقائياً
       let inv = null;
       if (cloudEnabled()) inv = await fetchInvoiceCloud(id);
       if (!inv) inv = getInvoice(id);

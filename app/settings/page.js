@@ -1,14 +1,50 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { getSettings, saveSettings, exportBackup, importBackup, cloudEnabled, syncPull } from '@/lib/db';
+import {
+  getSettings,
+  saveSettings,
+  exportBackup,
+  importBackup,
+  cloudEnabled,
+  syncPull,
+  getCloudConfig,
+  setCloudConfig,
+} from '@/lib/db';
 
 export default function SettingsPage() {
   const [s, setS] = useState(null);
   const [msg, setMsg] = useState('');
+  const [sbUrl, setSbUrl] = useState('');
+  const [sbKey, setSbKey] = useState('');
+  const [sbMsg, setSbMsg] = useState('');
+  const [testing, setTesting] = useState(false);
   const fileRef = useRef(null);
 
-  useEffect(() => setS(getSettings()), []);
+  useEffect(() => {
+    setS(getSettings());
+    const c = getCloudConfig();
+    if (c) {
+      setSbUrl(c.url);
+      setSbKey(c.key);
+    }
+  }, []);
   if (!s) return null;
+
+  async function saveCloud() {
+    setTesting(true);
+    setSbMsg('⏳ جاري الاختبار...');
+    setCloudConfig(sbUrl, sbKey);
+    if (!sbUrl || !sbKey) {
+      setSbMsg('تم مسح إعداد السحابة — البرنامج شغال محلي');
+      setTesting(false);
+      return;
+    }
+    const ok = await syncPull();
+    setSbMsg(ok
+      ? '✅ الاتصال ناجح! البيانات بتتزامن مع السحابة دلوقتي — اعمل نفس الخطوة على باقي الأجهزة'
+      : '❌ الاتصال فشل — راجع الـ URL والمفتاح وتأكد إنك شغّلت ملف schema.sql في Supabase');
+    setTesting(false);
+  }
 
   function set(patch) {
     setS({ ...s, ...patch });
@@ -83,11 +119,29 @@ export default function SettingsPage() {
       </div>
 
       <div className="card">
-        <h3>☁️ التخزين السحابي والنسخ الاحتياطي</h3>
+        <h3>☁️ التخزين السحابي والمزامنة اللحظية</h3>
         <p style={{ marginBottom: 10 }}>
           {cloudEnabled()
             ? <span className="badge green">✅ متصل بـ Supabase — كل البيانات بتتزامن تلقائياً</span>
-            : <span className="badge orange">💾 تخزين محلي فقط — لتفعيل السحابة أضف بيانات Supabase في إعدادات Vercel (الشرح في README)</span>}
+            : <span className="badge orange">💾 تخزين محلي فقط — فعّل السحابة بالخانتين دول</span>}
+        </p>
+        <div className="grid cols-2" style={{ marginBottom: 10, alignItems: 'end' }}>
+          <label className="field">
+            <span>Supabase Project URL</span>
+            <input dir="ltr" placeholder="https://xxxx.supabase.co" value={sbUrl} onChange={(e) => setSbUrl(e.target.value.trim())} />
+          </label>
+          <label className="field">
+            <span>Supabase anon key</span>
+            <input dir="ltr" placeholder="eyJhbGciOi..." value={sbKey} onChange={(e) => setSbKey(e.target.value.trim())} />
+          </label>
+        </div>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
+          <button className="btn-accent" onClick={saveCloud} disabled={testing}>☁️ حفظ واختبار الاتصال</button>
+          {sbMsg && <b style={{ fontSize: 13 }}>{sbMsg}</b>}
+        </div>
+        <p className="muted" style={{ fontSize: 12, marginBottom: 12 }}>
+          💡 من supabase.com: اعمل مشروع ← شغّل ملف supabase/schema.sql في SQL Editor ← هات الـ URL والمفتاح من
+          Project Settings → API والصقهم هنا. ومش محتاج تعملها تاني على الموبايل — QR لوحة الأدمن بيظبطه تلقائياً.
         </p>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <button className="btn-primary" onClick={downloadBackup}>📥 تحميل نسخة احتياطية</button>
