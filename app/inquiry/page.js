@@ -8,6 +8,7 @@ import {
   fetchSettingsCloud,
   cloudEnabled,
   seedIfEmpty,
+  cloudConfigFromHash,
 } from '@/lib/db';
 import { num } from '@/lib/format';
 
@@ -22,6 +23,7 @@ export default function InquiryPage() {
 
   useEffect(() => {
     (async () => {
+      cloudConfigFromHash(); // مسح QR الأدمن بيظبط الموبايل على السحابة تلقائياً
       seedIfEmpty();
       let s = null;
       let list = null;
