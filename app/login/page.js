@@ -18,7 +18,7 @@ export default function LoginPage() {
     } else if (pin === (s.accountantPassword || '3333')) {
       sessionStorage.setItem('saqqa_authed', '1');
       sessionStorage.setItem('saqqa_role', 'accountant');
-      router.replace('/');
+      router.replace('/accountant');
     } else if (pin === (s.pin || '7974')) {
       sessionStorage.setItem('saqqa_authed', '1');
       sessionStorage.setItem('saqqa_role', 'cashier');
