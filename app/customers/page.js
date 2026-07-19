@@ -4,7 +4,7 @@ import { listCustomers, saveCustomer, deleteCustomer, listInvoices, getSettings 
 import { num } from '@/lib/format';
 import { waMeLink } from '@/lib/wa';
 
-const empty = { name: '', phone: '', address: '', notes: '' };
+const empty = { name: '', phone: '', address: '', notes: '', creditLimit: '', priceType: 'قطاعي' };
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState([]);
@@ -37,7 +37,7 @@ export default function CustomersPage() {
   function submit(e) {
     e.preventDefault();
     if (!form.name) return;
-    saveCustomer(form);
+    saveCustomer({ ...form, creditLimit: Number(form.creditLimit) || 0 });
     setForm(empty);
     reload();
   }
@@ -53,6 +53,15 @@ export default function CustomersPage() {
             <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} dir="ltr" placeholder="01xxxxxxxxx" /></label>
           <label className="field"><span>العنوان</span>
             <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></label>
+          <label className="field"><span>نوع السعر</span>
+            <select value={form.priceType || 'قطاعي'} onChange={(e) => setForm({ ...form, priceType: e.target.value })}>
+              <option>قطاعي</option>
+              <option>جملة</option>
+              <option>موزع</option>
+            </select></label>
+          <label className="field"><span>حد الائتمان (أقصى مديونية — 0 = بدون حد)</span>
+            <input type="number" min="0" step="any" value={form.creditLimit}
+              onChange={(e) => setForm({ ...form, creditLimit: e.target.value })} /></label>
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn-green">💾 حفظ</button>
             {form.id && <button type="button" onClick={() => setForm(empty)}>إلغاء</button>}

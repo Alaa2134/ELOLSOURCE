@@ -35,27 +35,32 @@ export default function ReportsPage() {
   );
 
   const stats = useMemo(() => {
-    const total = filtered.reduce((s, i) => s + (i.totals?.net || 0), 0);
     const costByCode = Object.fromEntries(products.map((p) => [String(p.code), Number(p.cost) || 0]));
+    let total = 0;
+    let returns = 0;
     let cost = 0;
     const byDay = {};
     const byItem = {};
     for (const inv of filtered) {
+      const sign = inv.type === 'مرتجع' ? -1 : 1; // المرتجعات بتتخصم من المبيعات والربح
+      if (sign < 0) returns += inv.totals?.net || 0;
+      total += sign * (inv.totals?.net || 0);
       const k = dayKey(inv.date);
       byDay[k] = byDay[k] || { count: 0, total: 0 };
-      byDay[k].count++;
-      byDay[k].total += inv.totals?.net || 0;
+      if (sign > 0) byDay[k].count++;
+      byDay[k].total += sign * (inv.totals?.net || 0);
       for (const it of inv.items || []) {
-        cost += (costByCode[String(it.code)] || 0) * (Number(it.qty) || 0);
+        cost += sign * (costByCode[String(it.code)] || 0) * (Number(it.stockQty ?? it.qty) || 0);
         const key = it.code + '|' + it.name;
         byItem[key] = byItem[key] || { code: it.code, name: it.name, qty: 0, total: 0 };
-        byItem[key].qty += Number(it.qty) || 0;
-        byItem[key].total += Number(it.total) || 0;
+        byItem[key].qty += sign * (Number(it.qty) || 0);
+        byItem[key].total += sign * (Number(it.total) || 0);
       }
     }
     return {
       total,
-      count: filtered.length,
+      returns,
+      count: filtered.filter((i) => i.type !== 'مرتجع').length,
       profit: total - cost,
       byDay: Object.entries(byDay).sort((a, b) => b[0].localeCompare(a[0])),
       topItems: Object.values(byItem).sort((a, b) => b.total - a.total).slice(0, 15),
@@ -79,9 +84,9 @@ export default function ReportsPage() {
 
       <div className="grid cols-3" style={{ marginBottom: 16 }}>
         <div className="stat orange">
-          <div className="label">إجمالي المبيعات</div>
+          <div className="label">صافي المبيعات {stats.returns > 0 ? '(بعد المرتجعات)' : ''}</div>
           <div className="value">{num(stats.total, ar)}</div>
-          <div className="sub">{settings.currency}</div>
+          <div className="sub">{settings.currency}{stats.returns > 0 ? ` — مرتجعات ${num(stats.returns, ar)}` : ''}</div>
         </div>
         <div className="stat">
           <div className="label">عدد الفواتير</div>

@@ -31,6 +31,24 @@ create table if not exists expenses (
   updated_at timestamptz default now()
 );
 
+create table if not exists suppliers (
+  id text primary key,
+  data jsonb not null,
+  updated_at timestamptz default now()
+);
+
+create table if not exists purchases (
+  id text primary key,
+  data jsonb not null,
+  updated_at timestamptz default now()
+);
+
+create table if not exists stocktakes (
+  id text primary key,
+  data jsonb not null,
+  updated_at timestamptz default now()
+);
+
 create table if not exists daycloses (
   id text primary key,
   data jsonb not null,
@@ -56,6 +74,18 @@ alter table customers enable row level security;
 alter table invoices enable row level security;
 alter table payments enable row level security;
 alter table expenses enable row level security;
+alter table suppliers enable row level security;
+alter table purchases enable row level security;
+alter table stocktakes enable row level security;
+
+drop policy if exists "allow all suppliers" on suppliers;
+create policy "allow all suppliers" on suppliers for all using (true) with check (true);
+
+drop policy if exists "allow all purchases" on purchases;
+create policy "allow all purchases" on purchases for all using (true) with check (true);
+
+drop policy if exists "allow all stocktakes" on stocktakes;
+create policy "allow all stocktakes" on stocktakes for all using (true) with check (true);
 alter table daycloses enable row level security;
 alter table audit enable row level security;
 alter table settings enable row level security;
@@ -90,5 +120,8 @@ alter publication supabase_realtime add table customers;
 alter publication supabase_realtime add table invoices;
 alter publication supabase_realtime add table payments;
 alter publication supabase_realtime add table expenses;
+alter publication supabase_realtime add table suppliers;
+alter publication supabase_realtime add table purchases;
+alter publication supabase_realtime add table stocktakes;
 alter publication supabase_realtime add table daycloses;
 alter publication supabase_realtime add table settings;

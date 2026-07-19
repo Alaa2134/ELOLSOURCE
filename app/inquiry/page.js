@@ -103,9 +103,12 @@ export default function InquiryPage() {
         </p>
         {filtered.map((p) => (
           <div className="inquiry-item" key={p.id}>
-            <div>
-              <div className="i-name">{p.name}</div>
-              <div className="i-code">كود {ar ? num(p.code, ar) : p.code}</div>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              {p.image && <img src={p.image} alt="" className="thumb" style={{ width: 46, height: 46 }} />}
+              <div>
+                <div className="i-name">{p.name}</div>
+                <div className="i-code">كود {ar ? num(p.code, ar) : p.code}</div>
+              </div>
             </div>
             <div style={{ textAlign: 'left' }}>
               <div className="i-price">{num(p.price, ar)} <small>{settings.currency}</small></div>

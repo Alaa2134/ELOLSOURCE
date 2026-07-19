@@ -22,6 +22,16 @@ export default function StatementPage() {
     const entries = [];
     for (const inv of listInvoices()) {
       if (inv.customer?.name !== name) continue;
+      if (inv.type === 'مرتجع') {
+        // المرتجع دائن: بيقلل حساب العميل
+        entries.push({
+          date: inv.date,
+          desc: `مرتجع رقم ${inv.number}${inv.refNumber ? ` من فاتورة ${inv.refNumber}` : ''}`,
+          debit: 0,
+          credit: inv.totals?.creditedToDebt || 0,
+        });
+        continue;
+      }
       entries.push({
         date: inv.date,
         desc: `فاتورة بيع رقم ${inv.number}${inv.totals?.prevBalance ? ' (شاملة حساب سابق)' : ''}`,

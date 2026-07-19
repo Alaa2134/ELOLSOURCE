@@ -22,7 +22,11 @@ export default function InvoiceDoc({ invoice, settings, qrDataUrl, paper = 'a4' 
     <div className="inv-head">
       <div className="co">
         <div className="name">{settings.companyName}</div>
-        <div className="doc">{settings.docTitle}</div>
+        <div className="doc">
+          {invoice.type === 'مرتجع'
+            ? `فاتورة مرتجع${invoice.refNumber ? ` — من فاتورة ${num(invoice.refNumber, ar)}` : ''}`
+            : settings.docTitle}
+        </div>
         <div className="tm">{fmtTime(invoice.date, ar)}</div>
       </div>
       <div className="mid">

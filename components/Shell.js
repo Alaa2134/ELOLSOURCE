@@ -14,6 +14,7 @@ import {
   runDailyBackup,
 } from '@/lib/db';
 import { fmtDate } from '@/lib/format';
+import { maybeSendDailyReport, maybeSendDebtReminders } from '@/lib/wa';
 
 // roles: مين يشوف الصفحة — perm: صلاحية بتسمح للكاشير لو الأدمن فعّلها
 const NAV = [
@@ -23,10 +24,13 @@ const NAV = [
   { href: '/reps', label: '🛵 تحصيل المندوبين', title: 'تحصيل المندوبين', roles: ['admin', 'accountant'] },
   { href: '/expenses', label: '💸 المصاريف اليومية', title: 'المصاريف اليومية', roles: ['admin', 'cashier', 'accountant'] },
   { href: '/invoices', label: '📁 الفواتير', title: 'الفواتير', roles: ['admin', 'cashier', 'accountant'] },
+  { href: '/returns', label: '↩️ مرتجع بيع', title: 'مرتجع بيع', roles: ['admin', 'cashier'] },
+  { href: '/purchases', label: '📥 المشتريات والموردين', title: 'المشتريات والموردين', roles: ['admin', 'accountant'] },
   { href: '/statement', label: '📄 كشف حساب', title: 'كشف حساب عميل', roles: ['admin', 'cashier', 'accountant'] },
   { href: '/products', label: '📦 الأصناف والمخزون', title: 'الأصناف والمخزون', roles: ['admin', 'cashier'] },
   { href: '/customers', label: '👥 العملاء', title: 'العملاء', roles: ['admin', 'cashier'] },
   { href: '/barcodes', label: '🏷️ استيكر باركود', title: 'استيكر باركود', roles: ['admin', 'cashier'] },
+  { href: '/stocktake', label: '📋 جرد المخزون', title: 'جرد المخزون', roles: ['admin', 'cashier'] },
   { href: '/dayclose', label: '🧮 إقفال يومية', title: 'إقفال يومية', roles: ['admin', 'cashier', 'accountant'] },
   { href: '/inquiry', label: '📱 استعلام أسعار', title: 'استعلام أسعار', roles: ['admin', 'cashier', 'accountant'] },
   { href: '/reports', label: '📈 التقارير', title: 'التقارير', roles: ['admin', 'accountant'], perm: 'cashierReports' },
@@ -62,7 +66,8 @@ export default function Shell({ children }) {
     pathname.startsWith('/inv/') ||
     pathname.startsWith('/print/') ||
     pathname === '/login' ||
-    pathname === '/inquiry';
+    pathname === '/inquiry' ||
+    pathname === '/catalog';
 
   useEffect(() => {
     seedIfEmpty();
@@ -90,6 +95,8 @@ export default function Shell({ children }) {
     const t = setInterval(() => {
       flushPending();
       syncPull(); // مزامنة دورية احتياطية
+      maybeSendDailyReport(); // تقرير آخر اليوم للأدمن في معاده
+      maybeSendDebtReminders(); // تذكير المديونيات الأسبوعي
     }, 60000);
     return () => clearInterval(t);
   }, [pathname, bare, router]);

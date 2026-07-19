@@ -147,6 +147,12 @@ export default function AdminPage() {
           <p style={{ textAlign: 'center', fontSize: 12 }} className="muted" dir="ltr">
             {(s.publicBaseUrl || (typeof window !== 'undefined' ? window.location.origin : '')) + '/inquiry'}
           </p>
+          <p style={{ marginTop: 10, fontSize: 13 }}>
+            🛒 <b>كتالوج العملاء</b> (شاركه مع عملائك — يتفرجوا ويطلبوا واتساب):
+          </p>
+          <p style={{ fontSize: 12 }} className="muted" dir="ltr">
+            {(s.publicBaseUrl || (typeof window !== 'undefined' ? window.location.origin : '')) + '/catalog' + cloudLinkHash()}
+          </p>
         </div>
       </div>
 
