@@ -1,0 +1,232 @@
+'use client';
+import { usePathname, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useEffect, useRef, useState } from 'react';
+import {
+  getSettings,
+  saveSettings,
+  seedIfEmpty,
+  syncPull,
+  cloudEnabled,
+  flushPending,
+  getRole,
+  getSupabase,
+  runDailyBackup,
+} from '@/lib/db';
+import { fmtDate } from '@/lib/format';
+
+// roles: مين يشوف الصفحة — perm: صلاحية بتسمح للكاشير لو الأدمن فعّلها
+const NAV = [
+  { href: '/pos', label: '🧾 فاتورة بيع', title: 'فاتورة بيع', roles: ['admin', 'cashier'] },
+  { href: '/', label: '📊 لوحة التحكم', title: 'لوحة التحكم', roles: ['admin', 'accountant'] },
+  { href: '/payments', label: '💵 سند قبض', title: 'سند قبض', roles: ['admin', 'cashier', 'accountant'] },
+  { href: '/reps', label: '🛵 تحصيل المندوبين', title: 'تحصيل المندوبين', roles: ['admin', 'accountant'] },
+  { href: '/expenses', label: '💸 المصاريف اليومية', title: 'المصاريف اليومية', roles: ['admin', 'cashier', 'accountant'] },
+  { href: '/invoices', label: '📁 الفواتير', title: 'الفواتير', roles: ['admin', 'cashier', 'accountant'] },
+  { href: '/statement', label: '📄 كشف حساب', title: 'كشف حساب عميل', roles: ['admin', 'cashier', 'accountant'] },
+  { href: '/products', label: '📦 الأصناف والمخزون', title: 'الأصناف والمخزون', roles: ['admin', 'cashier'] },
+  { href: '/customers', label: '👥 العملاء', title: 'العملاء', roles: ['admin', 'cashier'] },
+  { href: '/barcodes', label: '🏷️ استيكر باركود', title: 'استيكر باركود', roles: ['admin', 'cashier'] },
+  { href: '/dayclose', label: '🧮 إقفال يومية', title: 'إقفال يومية', roles: ['admin', 'cashier', 'accountant'] },
+  { href: '/inquiry', label: '📱 استعلام أسعار', title: 'استعلام أسعار', roles: ['admin', 'cashier', 'accountant'] },
+  { href: '/reports', label: '📈 التقارير', title: 'التقارير', roles: ['admin', 'accountant'], perm: 'cashierReports' },
+  { href: '/audit', label: '📜 سجل العمليات', title: 'سجل العمليات', roles: ['admin', 'accountant'] },
+  { href: '/whatsapp', label: '💬 واتساب', title: 'واتساب', roles: ['admin'], perm: 'cashierWhatsapp' },
+  { href: '/settings', label: '⚙️ الإعدادات', title: 'الإعدادات', roles: ['admin'] },
+  { href: '/admin', label: '👑 لوحة الأدمن', title: 'لوحة الأدمن', roles: ['admin'] },
+];
+
+const ROLE_HOME = { admin: '/', cashier: '/pos', accountant: '/' };
+const ROLE_LABEL = { admin: '👑 أدمن', cashier: '💼 كاشير', accountant: '🧮 محاسب' };
+
+function canSee(item, role, perms) {
+  if (item.roles.includes(role)) return true;
+  if (role === 'cashier' && item.perm && perms?.[item.perm]) return true;
+  return false;
+}
+
+export default function Shell({ children }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const [ready, setReady] = useState(false);
+  const [cloud, setCloud] = useState(false);
+  const [role, setRole] = useState('');
+  const [locked, setLocked] = useState(false);
+  const [lockPass, setLockPass] = useState('');
+  const [lockErr, setLockErr] = useState('');
+  const [printers, setPrinters] = useState([]);
+  const [printerName, setPrinterName] = useState('');
+  const lastBeat = useRef(Date.now());
+
+  const bare =
+    pathname.startsWith('/inv/') ||
+    pathname.startsWith('/print/') ||
+    pathname === '/login' ||
+    pathname === '/inquiry';
+
+  useEffect(() => {
+    seedIfEmpty();
+    setCloud(cloudEnabled());
+    if (!bare) {
+      const authed = sessionStorage.getItem('saqqa_authed') === '1';
+      if (!authed) {
+        router.replace('/login');
+        return;
+      }
+      const r = getRole();
+      setRole(r);
+      const item = NAV.find((n) => n.href === pathname);
+      if (item && !canSee(item, r, getSettings().perms)) {
+        router.replace(ROLE_HOME[r] || '/pos');
+        return;
+      }
+    }
+    setReady(true);
+    syncPull();
+    runDailyBackup();
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+    const t = setInterval(() => {
+      flushPending();
+      syncPull(); // مزامنة دورية احتياطية
+    }, 60000);
+    return () => clearInterval(t);
+  }, [pathname, bare, router]);
+
+  // مزامنة لحظية Realtime من Supabase — أي تعديل من جهاز تاني بيوصل فوراً
+  useEffect(() => {
+    const sb = getSupabase();
+    if (!sb || bare) return;
+    const ch = sb
+      .channel('saqqa-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public' }, () => syncPull())
+      .subscribe();
+    return () => {
+      sb.removeChannel(ch);
+    };
+  }, [bare]);
+
+  // قفل البرنامج عند السكون (Sleep) أو ترك الجهاز — بيطلب كلمة السر تاني
+  useEffect(() => {
+    if (bare) return;
+    lastBeat.current = Date.now();
+    const beat = setInterval(() => {
+      if (Date.now() - lastBeat.current > 90000) setLocked(true); // الجهاز كان نايم
+      lastBeat.current = Date.now();
+    }, 15000);
+    const onVis = () => {
+      if (document.visibilityState === 'visible' && Date.now() - lastBeat.current > 60000) {
+        setLocked(true);
+      }
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      clearInterval(beat);
+      document.removeEventListener('visibilitychange', onVis);
+    };
+  }, [bare]);
+
+  // قائمة الطابعات (متاحة في نسخة الديسكتوب EXE — في المتصفح بيظهر خيار النافذة الافتراضية)
+  useEffect(() => {
+    setPrinterName(getSettings().printerName || '');
+    if (typeof window !== 'undefined' && window.electronAPI?.getPrinters) {
+      window.electronAPI.getPrinters().then(setPrinters).catch(() => {});
+    }
+  }, []);
+
+  if (bare) return <>{children}</>;
+  if (!ready) return null;
+
+  const current = NAV.find((n) => n.href === pathname);
+  const s = getSettings();
+  const visibleNav = NAV.filter((n) => canSee(n, role, s.perms));
+
+  function unlock(e) {
+    e.preventDefault();
+    const st = getSettings();
+    const ok =
+      lockPass === st.adminPassword ||
+      (role === 'cashier' && lockPass === st.pin) ||
+      (role === 'accountant' && lockPass === st.accountantPassword) ||
+      (role === 'admin' && lockPass === st.adminPassword);
+    if (ok) {
+      setLocked(false);
+      setLockPass('');
+      setLockErr('');
+    } else {
+      setLockErr('كلمة السر غير صحيحة');
+      setLockPass('');
+    }
+  }
+
+  return (
+    <div className="shell">
+      {locked && (
+        <div className="lock-overlay">
+          <div className="pinbox card">
+            <img src="/logo.jpg" alt="ALSAKA" className="login-logo" />
+            <h2 style={{ color: 'var(--brand)', marginBottom: 4 }}>{s.companyName}</h2>
+            <p className="muted" style={{ marginBottom: 16 }}>🔒 البرنامج مقفول — أدخل كلمة السر للمتابعة</p>
+            <form onSubmit={unlock}>
+              <input type="password" autoFocus value={lockPass} onChange={(e) => setLockPass(e.target.value)} placeholder="••••" dir="ltr" />
+              {lockErr && <p className="red-text" style={{ marginTop: 8 }}>{lockErr}</p>}
+              <button className="btn-accent" style={{ marginTop: 14, width: '100%', justifyContent: 'center' }}>فتح</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <aside className="sidebar no-print">
+        <div className="logo">
+          <img src="/logo.jpg" alt="ALSAKA" className="logo-img" />
+          <div>
+            <h1>{s.companyName}</h1>
+            <small>{ROLE_LABEL[role] || ''} — نظام الكاشير</small>
+          </div>
+        </div>
+        <nav>
+          {visibleNav.map((n) => (
+            <Link key={n.href} href={n.href} className={pathname === n.href ? 'active' : ''}>
+              {n.label}
+            </Link>
+          ))}
+        </nav>
+        <div className="foot">
+          {cloud ? '☁️ متزامن لحظياً مع السحابة' : '💾 تخزين محلي (فعّل السحابة من الإعدادات)'}
+        </div>
+      </aside>
+      <div className="main">
+        <header className="topbar no-print">
+          <div className="title">{current ? current.title : s.companyName}</div>
+          <div className="meta">
+            <select
+              className="printer-select"
+              title="اختيار الطابعة"
+              value={printerName}
+              onChange={(e) => {
+                setPrinterName(e.target.value);
+                saveSettings({ printerName: e.target.value });
+              }}
+            >
+              <option value="">🖨️ الطابعة الافتراضية</option>
+              {printers.map((p) => <option key={p} value={p}>🖨️ {p}</option>)}
+            </select>
+            <span>📅 {fmtDate(new Date().toISOString(), s.arabicDigits)}</span>
+            <button
+              className="btn-sm"
+              onClick={() => {
+                sessionStorage.removeItem('saqqa_authed');
+                sessionStorage.removeItem('saqqa_role');
+                router.replace('/login');
+              }}
+            >
+              🔒 خروج
+            </button>
+          </div>
+        </header>
+        <div className="content">{children}</div>
+      </div>
+    </div>
+  );
+}
