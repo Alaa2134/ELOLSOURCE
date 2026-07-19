@@ -35,10 +35,12 @@ export default function CatalogPage() {
     })();
   }, []);
 
-  const filtered = useMemo(() => {
-    if (!q.trim()) return products.slice(0, 60);
-    return products.filter((p) => p.name.includes(q.trim()) || String(p.code).includes(q.trim())).slice(0, 60);
+  const [showCount, setShowCount] = useState(60);
+  const allFiltered = useMemo(() => {
+    if (!q.trim()) return products;
+    return products.filter((p) => p.name.includes(q.trim()) || String(p.code).includes(q.trim()));
   }, [q, products]);
+  const filtered = allFiltered.slice(0, showCount);
 
   if (loading) return <p style={{ padding: 40, textAlign: 'center' }}>جاري التحميل...</p>;
 
@@ -98,6 +100,12 @@ export default function CatalogPage() {
           })}
         </div>
         {!filtered.length && <p style={{ textAlign: 'center', padding: 30, color: '#b8c6d8' }}>مفيش نتائج 🔍</p>}
+        {allFiltered.length > filtered.length && (
+          <button className="btn-accent" style={{ width: '100%', justifyContent: 'center', marginTop: 10 }}
+            onClick={() => setShowCount(showCount + 100)}>
+            ⬇️ عرض المزيد ({allFiltered.length - filtered.length} صنف كمان)
+          </button>
+        )}
       </div>
 
       {cartItems.length > 0 && (
