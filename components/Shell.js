@@ -12,6 +12,7 @@ import {
   getRole,
   getSupabase,
   runDailyBackup,
+  ensureFullPush,
 } from '@/lib/db';
 import { fmtDate } from '@/lib/format';
 import { maybeSendDailyReport, maybeSendDebtReminders } from '@/lib/wa';
@@ -92,6 +93,7 @@ export default function Shell({ children }) {
       setReady(true);
     })();
     syncPull();
+    ensureFullPush(); // لو السحابة متفعلة والبيانات القديمة لسه مترفعتش — نرفعها
     runDailyBackup();
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});

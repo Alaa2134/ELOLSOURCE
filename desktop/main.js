@@ -66,5 +66,13 @@ ipcMain.handle('print', (event, deviceName) => {
   });
 });
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  createWindow();
+  // بوابة الواتساب المدمجة: بتشتغل تلقائياً — افتح صفحة واتساب في البرنامج وامسح الـ QR
+  try {
+    require('./gateway')(path.join(app.getPath('userData'), 'wa-auth'));
+  } catch (e) {
+    console.log('gateway not started:', e.message);
+  }
+});
 app.on('window-all-closed', () => app.quit());
