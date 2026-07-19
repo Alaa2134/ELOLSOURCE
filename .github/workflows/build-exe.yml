@@ -1,0 +1,68 @@
+# بناء 3 برامج EXE (كاشير / محاسب / أدمن) على ويندوز حقيقي ونشرهم في Release
+name: Build EXE Releases
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Cashier EXE
+        shell: pwsh
+        run: |
+          Set-Content -Path config.json -Value '{"url":"https://alsaka.vercel.app","title":"كاشير السقا"}' -Encoding UTF8
+          npx electron-builder --win `
+            --config.appId=com.alsaka.pos.cashier `
+            --config.productName=Saqqa-Cashier `
+            --config.nsis.shortcutName="كاشير السقا" `
+            --config.artifactName=SaqqaPOS-Cashier-Setup.exe
+
+      - name: Build Accountant EXE
+        shell: pwsh
+        run: |
+          Set-Content -Path config.json -Value '{"url":"https://alsaka.vercel.app","title":"محاسب السقا"}' -Encoding UTF8
+          npx electron-builder --win `
+            --config.appId=com.alsaka.pos.accountant `
+            --config.productName=Saqqa-Accountant `
+            --config.nsis.shortcutName="محاسب السقا" `
+            --config.artifactName=SaqqaPOS-Accountant-Setup.exe
+
+      - name: Build Admin EXE
+        shell: pwsh
+        run: |
+          Set-Content -Path config.json -Value '{"url":"https://alsaka.vercel.app","title":"أدمن السقا"}' -Encoding UTF8
+          npx electron-builder --win `
+            --config.appId=com.alsaka.pos.admin `
+            --config.productName=Saqqa-Admin `
+            --config.nsis.shortcutName="أدمن السقا" `
+            --config.artifactName=SaqqaPOS-Admin-Setup.exe
+
+      - name: Create GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = if ('${{ github.ref_type }}' -eq 'tag') { '${{ github.ref_name }}' } else { "exe-build-${{ github.run_number }}" }
+          gh release create $tag `
+            (Get-ChildItem dist/SaqqaPOS-*-Setup.exe | ForEach-Object { $_.FullName }) `
+            --repo ${{ github.repository }} `
+            --title "برامج السقا للويندوز — $tag" `
+            --notes "3 برامج جاهزة للتسطيب على ويندوز:`n`n- 💼 SaqqaPOS-Cashier-Setup.exe — برنامج الكاشير`n- 🧮 SaqqaPOS-Accountant-Setup.exe — برنامج المحاسب`n- 👑 SaqqaPOS-Admin-Setup.exe — برنامج الأدمن`n`nكل برنامج بيتسطب لوحده باختصار على الديسكتوب بأيقونة اللوجو، ومتوصل بالطابعات (قائمة طابعات حقيقية + طباعة مباشرة). الدخول بكلمة سر كل دور."

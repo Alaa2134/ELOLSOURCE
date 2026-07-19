@@ -6,19 +6,20 @@ const fs = require('fs');
 
 let win;
 
-function getAppUrl() {
+function getConfig() {
   try {
-    const cfg = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8'));
-    return cfg.url || 'http://localhost:3000';
+    return JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8'));
   } catch {
-    return 'http://localhost:3000';
+    return {};
   }
 }
 
 function createWindow() {
+  const cfg = getConfig();
   win = new BrowserWindow({
     width: 1400,
     height: 900,
+    title: cfg.title || 'Saqqa POS',
     icon: path.join(__dirname, 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -28,7 +29,11 @@ function createWindow() {
     autoHideMenuBar: true,
   });
   Menu.setApplicationMenu(null);
-  win.loadURL(getAppUrl());
+  // تثبيت اسم البرنامج (كاشير/محاسب/أدمن) على النافذة
+  win.webContents.on('page-title-updated', (e) => {
+    if (cfg.title) e.preventDefault();
+  });
+  win.loadURL(cfg.url || 'https://alsaka.vercel.app');
 }
 
 // قائمة الطابعات المتاحة على الجهاز
