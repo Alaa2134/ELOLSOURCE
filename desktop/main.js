@@ -4,6 +4,10 @@ const { app, BrowserWindow, ipcMain, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
+// مهم جداً: البرامج التلاتة (كاشير/محاسب/أدمن) بيشاركوا نفس مخزن البيانات
+// على نفس الجهاز — عشان الأدمن يشوف فواتير الكاشير فوراً بدون سحابة
+app.setPath('userData', path.join(app.getPath('appData'), 'SaqqaPOS-Shared'));
+
 let win;
 
 function getConfig() {
@@ -31,7 +35,13 @@ function createWindow() {
   Menu.setApplicationMenu(null);
   // تثبيت اسم البرنامج (كاشير/محاسب/أدمن) على النافذة
   win.webContents.on('page-title-updated', (e) => {
-    if (cfg.title) e.preventDefault();
+    if (cfg.title) {
+      e.preventDefault();
+      win.setTitle(cfg.title);
+    }
+  });
+  win.webContents.on('did-finish-load', () => {
+    if (cfg.title) win.setTitle(cfg.title);
   });
   win.loadURL(cfg.url || 'https://alsaka.vercel.app');
 }
