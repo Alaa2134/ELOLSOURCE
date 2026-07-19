@@ -463,6 +463,7 @@ export default function PosPage() {
                             value={r.name}
                             products={products}
                             arabicDigits={ar}
+                            sortMode={settings.suggestSort}
                             onType={(v) => updateRow(i, { name: v })}
                             onSelect={(p) => { updateRow(i, { code: p.code, name: p.name, price: priceFor(p), unit: '' }); focusCell(i, 'qty'); }}
                             onNavKey={(e) => onKey(e, i, 'name')}

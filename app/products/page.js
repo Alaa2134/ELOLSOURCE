@@ -36,6 +36,7 @@ export default function ProductsPage() {
   const [msg, setMsg] = useState('');
   const [pdfRows, setPdfRows] = useState(null); // معاينة منتجات الـ PDF قبل الإضافة
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [showCount, setShowCount] = useState(150);
   const pdfRef = useRef(null);
 
   function reload() {
@@ -47,9 +48,11 @@ export default function ProductsPage() {
   if (!settings) return null;
   const ar = settings.arabicDigits;
 
-  const filtered = products.filter(
+  const allFiltered = products.filter(
     (p) => !q || p.name.includes(q) || String(p.code).includes(q) || String(p.barcode || '').includes(q)
   );
+  // تخفيف وتسريع: مع آلاف الأصناف بنعرض أول شريحة بس والباقي بزرار "عرض المزيد"
+  const filtered = allFiltered.slice(0, showCount);
 
   function submit(e) {
     e.preventDefault();
@@ -202,8 +205,8 @@ export default function ProductsPage() {
 
       <div className="card">
         <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-          <input style={{ maxWidth: 300 }} placeholder="🔍 بحث بالاسم أو الكود أو الباركود" value={q} onChange={(e) => setQ(e.target.value)} />
-          <span className="muted">{num(filtered.length, ar)} صنف</span>
+          <input style={{ maxWidth: 300 }} placeholder="🔍 بحث بالاسم أو الكود أو الباركود" value={q} onChange={(e) => { setQ(e.target.value); setShowCount(150); }} />
+          <span className="muted">{num(allFiltered.length, ar)} صنف{allFiltered.length > filtered.length ? ` (معروض ${num(filtered.length, ar)})` : ''}</span>
           <div style={{ marginRight: 'auto', display: 'flex', gap: 8 }}>
             <button className="btn-accent" onClick={() => pdfRef.current?.click()} disabled={pdfBusy}>
               {pdfBusy ? '⏳ جاري التحليل...' : '📄 استيراد من PDF'}
@@ -290,6 +293,11 @@ export default function ProductsPage() {
             </tbody>
           </table>
         </div>
+        {allFiltered.length > filtered.length && (
+          <button className="btn-primary" style={{ marginTop: 10 }} onClick={() => setShowCount(showCount + 300)}>
+            ⬇️ عرض المزيد ({num(allFiltered.length - filtered.length, ar)} صنف كمان) — أو اكتب في البحث توصله أسرع
+          </button>
+        )}
       </div>
     </div>
   );

@@ -2,8 +2,40 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import QRCode from 'qrcode';
-import { getSettings, saveSettings, listInvoices, runDailyBackup, cloudLinkHash } from '@/lib/db';
+import {
+  getSettings,
+  saveSettings,
+  listInvoices,
+  runDailyBackup,
+  cloudLinkHash,
+  getCloudConfig,
+  setCloudConfig,
+  syncPull,
+  pushAllToCloud,
+  cloudEnabled,
+} from '@/lib/db';
+import { SCHEMA_SQL, DRIVE_SCRIPT } from '@/lib/setupTexts';
 import { num } from '@/lib/format';
+
+function CopyBtn({ text, label }) {
+  const [done, setDone] = useState(false);
+  return (
+    <button
+      className={done ? 'btn-green' : 'btn-accent'}
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(text);
+          setDone(true);
+          setTimeout(() => setDone(false), 3000);
+        } catch {
+          prompt('انسخ من هنا:', text);
+        }
+      }}
+    >
+      {done ? '✅ اتنسخ! روح الصقه' : label}
+    </button>
+  );
+}
 
 const PERMS = [
   { key: 'allowPriceEdit', label: 'الكاشير يقدر يعدل سعر الصنف في الفاتورة' },
@@ -19,6 +51,28 @@ export default function AdminPage() {
   const [msg, setMsg] = useState('');
   const [stats, setStats] = useState({ today: 0, month: 0, count: 0 });
   const [phoneQr, setPhoneQr] = useState('');
+  // معالج الربط
+  const [wizUrl, setWizUrl] = useState('');
+  const [wizKey, setWizKey] = useState('');
+  const [wizMsg, setWizMsg] = useState('');
+  const [wizBusy, setWizBusy] = useState(false);
+
+  async function connectCloud() {
+    if (!wizUrl || !wizKey) { setWizMsg('⚠️ الصق الاتنين الأول'); return; }
+    setWizBusy(true);
+    setWizMsg('⏳ جاري الاختبار...');
+    setCloudConfig(wizUrl, wizKey);
+    const ok = await syncPull();
+    if (!ok) {
+      setWizMsg('❌ مش متوصل — راجع الخطوة 2 (كود الجداول) والصق الرابط والمفتاح تاني');
+      setWizBusy(false);
+      return;
+    }
+    setWizMsg('⏳ اتوصلنا! جاري رفع كل الأصناف والفواتير...');
+    const push = await pushAllToCloud();
+    setWizMsg(push.ok ? `🎉 تمام! اترفع ${push.count} سجل — كل حاجة بقت أونلاين ومتزامنة` : `⚠️ ${push.error || 'مشكلة في الرفع'}`);
+    setWizBusy(false);
+  }
 
   useEffect(() => {
     setS(getSettings());
@@ -35,6 +89,8 @@ export default function AdminPage() {
       count: invoices.length,
     });
     const st = getSettings();
+    const conf = getCloudConfig();
+    if (conf) { setWizUrl(conf.url); setWizKey(conf.key); }
     // الـ QR بيشيل إعداد السحابة معاه — الموبايل بيتظبط تلقائياً أول ما يمسحه
     const url = (st.publicBaseUrl || window.location.origin) + '/inquiry' + cloudLinkHash();
     QRCode.toDataURL(url, { margin: 1, width: 180 }).then(setPhoneQr).catch(() => {});
@@ -115,6 +171,76 @@ export default function AdminPage() {
         </div>
       </div>
 
+      <div className="card" style={{ borderTop: '4px solid var(--accent)' }}>
+        <h3>🪄 معالج الربط — 3 خطوات، افتح وانسخ والصق وبس</h3>
+        <p className="muted" style={{ fontSize: 13, marginBottom: 14 }}>
+          كل زرار بيفتحلك الصفحة الصح على المتصفح، وكل كود ليه زرار نسخ جاهز — مش محتاج تفهم أي حاجة تقنية.
+        </p>
+
+        <div className="wizard-step">
+          <h4>1️⃣ المزامنة الأونلاين (مرة واحدة بس) {cloudEnabled() && <span className="badge green">✅ متفعلة</span>}</h4>
+          <ol>
+            <li>
+              <a className="btn btn-primary btn-sm" href="https://supabase.com/dashboard/sign-up" target="_blank" rel="noreferrer">🌐 افتح موقع Supabase</a>
+              &nbsp;← سجل دخول بزرار <b>GitHub</b> ← اضغط <b>New project</b> ← اكتب اسم <b>alsaka</b> وأي باسورد ← <b>Create</b> واستنى دقيقة
+            </li>
+            <li>
+              من القايمة الشمال اختار <b>SQL Editor</b> ← اضغط هنا:&nbsp;
+              <CopyBtn text={SCHEMA_SQL} label="📋 انسخ كود الجداول" />
+              &nbsp;← الصقه في الصفحة واضغط <b>Run</b>
+            </li>
+            <li>
+              من الترس تحت شمال <b>Project Settings ← API</b> ← انسخ <b>Project URL</b> و <b>anon public</b> والصقهم هنا:
+              <div className="grid cols-2" style={{ margin: '8px 0', gap: 8 }}>
+                <input dir="ltr" placeholder="https://xxxx.supabase.co" value={wizUrl} onChange={(e) => setWizUrl(e.target.value.trim())} />
+                <input dir="ltr" placeholder="eyJhbGciOi..." value={wizKey} onChange={(e) => setWizKey(e.target.value.trim())} />
+              </div>
+              <button className="btn-green" disabled={wizBusy} onClick={connectCloud}>☁️ تفعيل ورفع كل البيانات</button>
+              {wizMsg && <b style={{ marginRight: 10, fontSize: 13 }}>{wizMsg}</b>}
+            </li>
+          </ol>
+        </div>
+
+        <div className="wizard-step">
+          <h4>2️⃣ نسخة احتياطية يومية على جوجل درايف {s.backupUrl && <span className="badge green">✅ متفعلة</span>}</h4>
+          <ol>
+            <li>
+              <a className="btn btn-primary btn-sm" href="https://script.google.com/home/projects/create" target="_blank" rel="noreferrer">🌐 افتح Google Script</a>
+              &nbsp;← سجل بحساب جوجل بتاعك — هيفتح مشروع جديد لوحده
+            </li>
+            <li>
+              امسح الكود اللي في الصفحة و&nbsp;
+              <CopyBtn text={DRIVE_SCRIPT} label="📋 انسخ كود الدرايف" />
+              &nbsp;والصقه مكانه
+            </li>
+            <li>
+              اضغط <b>Deploy</b> (فوق يمين) ← <b>New deployment</b> ← علامة الترس اختار <b>Web app</b> ←
+              خلي <b>Who has access = Anyone</b> ← <b>Deploy</b> ← وافق على التصاريح ← انسخ الرابط اللي طلع والصقه هنا:
+              <div style={{ display: 'flex', gap: 8, margin: '8px 0' }}>
+                <input dir="ltr" placeholder="https://script.google.com/macros/s/.../exec" value={s.backupUrl}
+                  onChange={(e) => setS({ ...s, backupUrl: e.target.value.trim() })} />
+                <button className="btn-green" onClick={async () => {
+                  saveSettings({ backupUrl: s.backupUrl });
+                  localStorage.removeItem('saqqa_last_backup');
+                  await runDailyBackup();
+                  setMsg('✅ اتبعتت نسخة تجريبية — بص على الدرايف هتلاقي مجلد SaqqaPOS-Backups');
+                }} disabled={!s.backupUrl}>جرّب</button>
+              </div>
+            </li>
+          </ol>
+        </div>
+
+        <div className="wizard-step">
+          <h4>3️⃣ الواتساب (من برنامج الكاشير على الكمبيوتر)</h4>
+          <ol>
+            <li>افتح <b>برنامج كاشير السقا</b> المسطب على الكمبيوتر (البوابة شغالة جواه تلقائياً)</li>
+            <li>من القايمة افتح صفحة <b>💬 واتساب</b> — هتلاقي مربع QR ظاهر</li>
+            <li>من موبايل رقم المحل: واتساب ← الإعدادات ← <b>الأجهزة المرتبطة</b> ← <b>ربط جهاز</b> ← صوّر الـ QR — وخلاص، رسايل الشكر والتقارير هتتبعت لوحدها</li>
+          </ol>
+          <Link href="/whatsapp" className="btn btn-green btn-sm">💬 افتح صفحة الواتساب</Link>
+        </div>
+      </div>
+
       <div className="grid cols-2">
         <div className="card">
           <h3>☁️ نسخ احتياطي يومي على جوجل درايف</h3>
@@ -170,6 +296,12 @@ export default function AdminPage() {
               onChange={(e) => setS({ ...s, arabicDigits: e.target.checked })} />
             أرقام عربية (١٢٣)
           </label>
+          <label className="field"><span>ترتيب اقتراحات الأصناف في البيع</span>
+            <select value={s.suggestSort || 'ذكي'} onChange={(e) => setS({ ...s, suggestSort: e.target.value })}>
+              <option value="ذكي">ذكي (الأقرب لكلامك الأول)</option>
+              <option value="أبجدي">أبجدي (أ ب ت...)</option>
+              <option value="بالكود">برقم الصنف</option>
+            </select></label>
         </div>
         <div style={{ display: 'flex', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
           <Link href="/settings" className="btn btn-primary">🏢 بيانات الشركة والنسخ الاحتياطي</Link>

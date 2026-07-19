@@ -10,5 +10,6 @@ whatsapp-gateway/.env
 *.log
 .DS_Store
 public/pdf.worker.min.mjs
+lib/setupTexts.js
 desktop/node_modules/
 desktop/dist/

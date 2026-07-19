@@ -33,7 +33,9 @@ export default function StocktakePage() {
 
   if (!settings) return null;
   const ar = settings.arabicDigits;
-  const filtered = products.filter((p) => !q || p.name.includes(q) || String(p.code).includes(q));
+  // تخفيف: نعرض أول 200 — البحث بيوصلك لأي صنف فوراً
+  const allFiltered = products.filter((p) => !q || p.name.includes(q) || String(p.code).includes(q));
+  const filtered = allFiltered.slice(0, 200);
   const totalDiffValue = counted.reduce((s, x) => s + x.diffValue, 0);
 
   function commit() {
@@ -57,6 +59,9 @@ export default function StocktakePage() {
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
           <h3 style={{ margin: 0 }}>📋 جرد المخزون</h3>
           <input style={{ maxWidth: 280 }} placeholder="🔍 بحث بالاسم أو الكود" value={q} onChange={(e) => setQ(e.target.value)} />
+          {allFiltered.length > filtered.length && (
+            <span className="muted" style={{ fontSize: 12 }}>معروض {num(filtered.length, ar)} من {num(allFiltered.length, ar)} — ابحث توصل لأي صنف</span>
+          )}
           <div style={{ marginRight: 'auto', display: 'flex', gap: 10, alignItems: 'center' }}>
             {counted.length > 0 && (
               <b className={totalDiffValue < 0 ? 'red-text' : 'green-text'}>
