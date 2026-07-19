@@ -60,19 +60,13 @@ export default function PrintPage() {
 
   return (
     <div style={{ background: '#888', minHeight: '100vh', padding: '14px 0' }}>
-      {/* حجم ورقة الطباعة حسب طول الفاتورة: نص A4 للقصيرة */}
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `@media print { @page { size: ${paper === 'a5' ? 'A5 landscape' : 'A4 portrait'}; margin: 6mm; } }`,
-        }}
-      />
+      {/* الطباعة دايماً على A4 عادي (مضمونة مع كل الطابعات) — القصيرة بتطلع في النص العلوي مع خط قص */}
       <div className="print-actions no-print">
         <button className="btn-accent" onClick={doPrint}>
-          🖨️ طباعة ({paper === 'a5' ? 'نص ورقة' : 'A4'})
-          {settings.printerName ? ` — ${settings.printerName}` : ''}
+          🖨️ طباعة{settings.printerName ? ` — ${settings.printerName}` : ''}
         </button>
         <button onClick={() => setPaper(paper === 'a5' ? 'a4' : 'a5')}>
-          📄 تبديل الحجم: {paper === 'a5' ? 'ورقة A4 كاملة' : 'نص ورقة'}
+          📄 {paper === 'a5' ? 'الوضع: نص ورقة (اقطع عند خط ✂)' : 'الوضع: ورقة كاملة'}
         </button>
         {invoice.customer?.phone && (
           <a className="btn btn-green" target="_blank" rel="noreferrer" href={waMeLink(invoice.customer.phone, waMsg)}>
@@ -82,6 +76,9 @@ export default function PrintPage() {
         <button onClick={() => router.push('/pos')}>⬅ رجوع للبيع</button>
       </div>
       <InvoiceDoc invoice={invoice} settings={settings} qrDataUrl={qr} paper={paper} />
+      {paper === 'a5' && (
+        <div className="cut-line">✂ ‏- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - قص هنا</div>
+      )}
     </div>
   );
 }
