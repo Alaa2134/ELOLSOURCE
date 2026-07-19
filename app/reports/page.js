@@ -95,7 +95,7 @@ export default function ReportsPage() {
         <div className="stat green">
           <div className="label">الربح التقريبي</div>
           <div className="value">{num(stats.profit, ar)}</div>
-          <div className="sub">حسب أسعار التكلفة المسجلة</div>
+          <div className="sub">حسب السعر المبدئي المسجل</div>
         </div>
       </div>
 

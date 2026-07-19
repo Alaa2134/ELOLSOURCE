@@ -570,8 +570,12 @@ export default function PosPage() {
           <div className="box" style={{ display: 'grid', gap: 8 }}>
             {!saved ? (
               <>
-                <button className="btn-green" style={{ justifyContent: 'center' }} onClick={() => save(false)}>💾 حفظ الفاتورة</button>
-                <button className="btn-accent" style={{ justifyContent: 'center' }} onClick={() => save(true)}>🖨️ حفظ وطباعة</button>
+                <button className="btn-accent" style={{ justifyContent: 'center', fontSize: 16, padding: '12px' }} onClick={() => save(true)}>
+                  🖨️ طباعة الفاتورة
+                </button>
+                <p className="muted" style={{ textAlign: 'center', fontSize: 11, margin: 0 }}>
+                  ✅ الفاتورة بتتحفظ تلقائياً — حتى لو النور قطع
+                </p>
               </>
             ) : (
               <>
