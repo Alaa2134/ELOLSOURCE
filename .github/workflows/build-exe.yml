@@ -5,6 +5,10 @@ on:
   workflow_dispatch:
   push:
     tags: ['v*']
+    branches: [main]
+    paths:
+      - 'desktop/**'
+      - '.github/workflows/build-exe.yml'
 
 permissions:
   contents: write
