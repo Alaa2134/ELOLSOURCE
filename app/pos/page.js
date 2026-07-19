@@ -58,14 +58,44 @@ export default function PosPage() {
   const [scanning, setScanning] = useState(false); // كاميرا الباركود
   const tableRef = useRef(null);
 
+  const DRAFT_KEY = 'saqqa_pos_draft';
+
   useEffect(() => {
     setSettings(getSettings());
     setRole(getRole() || 'cashier');
     setProducts(listProducts());
     setCustomers(listCustomers());
     setReps(listReps());
-    setNumber(nextInvoiceNumber());
+    // استرجاع الفاتورة اللي كانت مفتوحة (لو النور قطع أو البرنامج اتقفل فجأة)
+    let restored = false;
+    try {
+      const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
+      if (d && (d.rows?.some((r) => r.code || r.name) || d.customerName)) {
+        setRows(d.rows?.length ? d.rows : [emptyRow()]);
+        setCustomerName(d.customerName || '');
+        setCustomerPhone(d.customerPhone || '');
+        setPayment(d.payment || 'نقدي');
+        setRep(d.rep || '');
+        setExtraDisc(d.extraDisc || 0);
+        setPaid(d.paid ?? '');
+        setNumber(d.number || nextInvoiceNumber());
+        restored = true;
+        showToast('🔄 استرجعنا الفاتورة اللي كانت مفتوحة — كمّل من حيث وقفت');
+      }
+    } catch {}
+    if (!restored) setNumber(nextInvoiceNumber());
   }, []);
+
+  // حفظ تلقائي مستمر لكل حاجة بتتكتب — أي صنف بيتجمع بيتحفظ فوراً
+  useEffect(() => {
+    if (!settings || saved) return;
+    try {
+      localStorage.setItem(
+        DRAFT_KEY,
+        JSON.stringify({ rows, number, payment, customerName, customerPhone, extraDisc, paid, rep })
+      );
+    } catch {}
+  }, [rows, number, payment, customerName, customerPhone, extraDisc, paid, rep, saved, settings]);
 
   // تنبيه المديونية عند اختيار العميل
   useEffect(() => {
@@ -257,6 +287,7 @@ export default function PosPage() {
     });
     // لو ضفنا الحساب السابق، نصفّي الفواتير القديمة (الدين بقى متسجل هنا)
     if (debtAdd > 0) settleCustomerDebt(customerName, inv.number, inv.id);
+    localStorage.removeItem(DRAFT_KEY); // الفاتورة اتحفظت رسمي — المسودة خلصت
     setSaved(inv);
     setProducts(listProducts());
     setCustomers(listCustomers());
@@ -295,6 +326,7 @@ export default function PosPage() {
   }
 
   function newInvoice() {
+    localStorage.removeItem(DRAFT_KEY);
     setRows([emptyRow()]);
     setCustomerName('');
     setCustomerPhone('');
