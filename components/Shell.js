@@ -18,6 +18,7 @@ import { maybeSendDailyReport, maybeSendDebtReminders } from '@/lib/wa';
 
 // roles: مين يشوف الصفحة — perm: صلاحية بتسمح للكاشير لو الأدمن فعّلها
 const NAV = [
+  { href: '/accountant', label: '🧮 لوحة المحاسب', title: 'برنامج المحاسب', roles: ['admin', 'accountant'] },
   { href: '/pos', label: '🧾 فاتورة بيع', title: 'فاتورة بيع', roles: ['admin', 'cashier'] },
   { href: '/', label: '📊 لوحة التحكم', title: 'لوحة التحكم', roles: ['admin', 'accountant'] },
   { href: '/payments', label: '💵 سند قبض', title: 'سند قبض', roles: ['admin', 'cashier', 'accountant'] },
@@ -40,8 +41,8 @@ const NAV = [
   { href: '/admin', label: '👑 لوحة الأدمن', title: 'لوحة الأدمن', roles: ['admin'] },
 ];
 
-const ROLE_HOME = { admin: '/', cashier: '/pos', accountant: '/' };
-const ROLE_LABEL = { admin: '👑 أدمن', cashier: '💼 كاشير', accountant: '🧮 محاسب' };
+const ROLE_HOME = { admin: '/', cashier: '/pos', accountant: '/accountant' };
+const ROLE_LABEL = { admin: '👑 أدمن — نظام الكاشير', cashier: '💼 كاشير — نظام الكاشير', accountant: '🧮 برنامج المحاسب' };
 
 function canSee(item, role, perms) {
   if (item.roles.includes(role)) return true;
@@ -189,7 +190,7 @@ export default function Shell({ children }) {
           <img src="/logo.jpg" alt="ALSAKA" className="logo-img" />
           <div>
             <h1>{s.companyName}</h1>
-            <small>{ROLE_LABEL[role] || ''} — نظام الكاشير</small>
+            <small>{ROLE_LABEL[role] || ''}</small>
           </div>
         </div>
         <nav>
