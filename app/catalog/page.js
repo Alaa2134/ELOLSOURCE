@@ -22,7 +22,7 @@ export default function CatalogPage() {
   useEffect(() => {
     (async () => {
       cloudConfigFromHash();
-      seedIfEmpty();
+      await seedIfEmpty();
       let s = null;
       let list = null;
       if (cloudEnabled()) {

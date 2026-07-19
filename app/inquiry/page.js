@@ -26,7 +26,7 @@ export default function InquiryPage() {
   useEffect(() => {
     (async () => {
       cloudConfigFromHash(); // مسح QR الأدمن بيظبط الموبايل على السحابة تلقائياً
-      seedIfEmpty();
+      await seedIfEmpty();
       let s = null;
       let list = null;
       if (cloudEnabled()) {
