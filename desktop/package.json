@@ -1,12 +1,19 @@
 {
   "name": "saqqa-pos-desktop",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "private": true,
   "description": "نسخة الديسكتوب (EXE) لنظام كاشير السقا للأدوات المنزلية",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder --win"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.9",
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "pino": "^9.4.0",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "electron": "^31.3.0",
@@ -15,7 +22,7 @@
   "build": {
     "appId": "com.alsaka.pos",
     "productName": "Saqqa POS",
-    "files": ["main.js", "preload.js", "config.json", "icon.png"],
+    "files": ["main.js", "preload.js", "gateway.js", "config.json", "icon.png", "node_modules/**/*"],
     "win": {
       "target": "nsis",
       "icon": "icon.png"

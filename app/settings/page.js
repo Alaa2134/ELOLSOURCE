@@ -9,6 +9,7 @@ import {
   syncPull,
   getCloudConfig,
   setCloudConfig,
+  pushAllToCloud,
 } from '@/lib/db';
 
 export default function SettingsPage() {
@@ -40,9 +41,17 @@ export default function SettingsPage() {
       return;
     }
     const ok = await syncPull();
-    setSbMsg(ok
-      ? '✅ الاتصال ناجح! البيانات بتتزامن مع السحابة دلوقتي — اعمل نفس الخطوة على باقي الأجهزة'
-      : '❌ الاتصال فشل — راجع الـ URL والمفتاح وتأكد إنك شغّلت ملف schema.sql في Supabase');
+    if (!ok) {
+      setSbMsg('❌ الاتصال فشل — راجع الـ URL والمفتاح وتأكد إنك شغّلت ملف schema.sql في Supabase');
+      setTesting(false);
+      return;
+    }
+    // رفعة شاملة: كل البيانات الموجودة على الجهاز بتطلع للسحابة دلوقتي
+    setSbMsg('⏳ الاتصال ناجح — جاري رفع كل البيانات للسحابة (الأصناف والفواتير وكل حاجة)...');
+    const push = await pushAllToCloud();
+    setSbMsg(push.ok
+      ? `✅ تمام! اترفع ${push.count} سجل للسحابة — الأصناف والفواتير بقوا أونلاين ومتزامنين على كل الأجهزة`
+      : `⚠️ الاتصال شغال بس الرفع الشامل واجه مشكلة: ${push.error || ''} — جرب زرار "مزامنة الآن"`);
     setTesting(false);
   }
 
