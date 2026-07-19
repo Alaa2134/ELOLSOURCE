@@ -50,7 +50,7 @@ export default function InquiryPage() {
 
   function login(e) {
     e.preventDefault();
-    if (pass === (settings.inquiryPassword || '1111')) {
+    if (pass === (settings.inquiryPassword || '261179')) {
       sessionStorage.setItem('saqqa_inquiry', '1');
       setAuthed(true);
     } else {
