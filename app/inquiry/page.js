@@ -22,6 +22,7 @@ export default function InquiryPage() {
   const [q, setQ] = useState('');
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
+  const [showCount, setShowCount] = useState(30);
 
   useEffect(() => {
     (async () => {
@@ -40,11 +41,12 @@ export default function InquiryPage() {
     })();
   }, []);
 
-  const filtered = useMemo(() => {
-    if (!q.trim()) return products.slice(0, 30);
+  const allFiltered = useMemo(() => {
+    if (!q.trim()) return products;
     const t = q.trim();
-    return products.filter((p) => p.name.includes(t) || String(p.code).includes(t)).slice(0, 50);
+    return products.filter((p) => p.name.includes(t) || String(p.code).includes(t));
   }, [q, products]);
+  const filtered = allFiltered.slice(0, showCount);
 
   if (loading) return <p style={{ padding: 40, textAlign: 'center' }}>جاري التحميل...</p>;
 
@@ -99,7 +101,7 @@ export default function InquiryPage() {
             style={{ flex: 1 }}
             placeholder="🔍 اكتب اسم الصنف أو الكود..."
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => { setQ(e.target.value); setShowCount(30); }}
             autoFocus
           />
           <button className="btn-accent" style={{ borderRadius: 12, fontSize: 22, padding: '0 16px' }}
@@ -118,7 +120,10 @@ export default function InquiryPage() {
           />
         )}
         <p className="muted" style={{ margin: '8px 2px', fontSize: 13 }}>
-          {num(filtered.length, ar)} صنف {!cloudEnabled() && '· 💾 بيانات الجهاز المحلي'}
+          {q
+            ? `${num(allFiltered.length, ar)} نتيجة`
+            : `إجمالي الأصناف: ${num(allFiltered.length, ar)} — معروض ${num(filtered.length, ar)}، ابحث توصل لأي صنف فوراً`}
+          {!cloudEnabled() && ' · 💾 بيانات الجهاز المحلي'}
         </p>
         {filtered.map((p) => (
           <div className="inquiry-item" key={p.id}>
@@ -140,6 +145,12 @@ export default function InquiryPage() {
           </div>
         ))}
         {!filtered.length && <p className="muted" style={{ textAlign: 'center', padding: 30 }}>مفيش نتائج 🔍</p>}
+        {allFiltered.length > filtered.length && (
+          <button className="btn-accent" style={{ width: '100%', justifyContent: 'center', marginTop: 8 }}
+            onClick={() => setShowCount(showCount + 100)}>
+            ⬇️ عرض المزيد ({num(allFiltered.length - filtered.length, ar)} صنف كمان)
+          </button>
+        )}
       </div>
     </div>
   );
