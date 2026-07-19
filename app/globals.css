@@ -481,6 +481,28 @@ table.tbl tr:hover td { background: #fef3ec; }
   border: 1px solid var(--line);
 }
 
+/* ماسح الباركود بالكاميرا */
+.scanner-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(10, 18, 28, .92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+}
+.scanner-box {
+  background: #fff;
+  border-radius: 14px;
+  padding: 14px;
+  width: min(420px, 96vw);
+  text-align: center;
+  border: 3px solid var(--accent);
+}
+.scanner-box #saqqa-cam { border-radius: 10px; overflow: hidden; }
+.scanner-box video { width: 100% !important; border-radius: 10px; }
+
 .toast {
   position: fixed;
   bottom: 20px;
