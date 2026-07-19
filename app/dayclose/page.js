@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { listInvoices, listPayments, listExpenses, listDayCloses, saveDayClose, getSettings, getRole } from '@/lib/db';
 import { num, fmtDate } from '@/lib/format';
+import { notifyAdmin } from '@/lib/wa';
 
 function dayKey(iso) {
   const d = new Date(iso);
@@ -62,6 +63,9 @@ export default function DayClosePage() {
       by: getRole() === 'admin' ? 'أدمن' : 'كاشير',
       closedAt: new Date().toISOString(),
     });
+    if (diff !== 0) {
+      notifyAdmin(`🧮 إقفال يومية ${day}: المفروض ${stats.expected.toFixed(2)} — الفعلي ${actualNum.toFixed(2)} — ${diff < 0 ? 'عجز' : 'زيادة'} ${Math.abs(diff).toFixed(2)}${notes ? `\nملاحظات: ${notes}` : ''}`);
+    }
     setCloses(listDayCloses());
     setActual('');
     setNotes('');

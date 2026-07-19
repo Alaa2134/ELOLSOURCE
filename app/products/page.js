@@ -4,7 +4,27 @@ import { listProducts, saveProduct, deleteProduct, getSettings } from '@/lib/db'
 import { num } from '@/lib/format';
 import { parsePdfProducts } from '@/lib/pdfImport';
 
-const empty = { code: '', name: '', price: '', cost: '', stock: '', barcode: '', category: 'أدوات منزلية' };
+const empty = {
+  code: '', name: '', price: '', cost: '', stock: '', barcode: '', category: 'أدوات منزلية',
+  priceWholesale: '', priceDistributor: '', packName: '', packQty: '', packPrice: '', image: '',
+};
+
+// ضغط صورة الصنف لحجم صغير قبل التخزين
+function resizeImage(file, maxSize = 300) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', 0.7));
+    };
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
+}
 
 export default function ProductsPage() {
   const [products, setProducts] = useState([]);
@@ -39,10 +59,26 @@ export default function ProductsPage() {
       price: Number(form.price) || 0,
       cost: Number(form.cost) || 0,
       stock: Number(form.stock) || 0,
+      priceWholesale: Number(form.priceWholesale) || 0,
+      priceDistributor: Number(form.priceDistributor) || 0,
+      packQty: Number(form.packQty) || 0,
+      packPrice: Number(form.packPrice) || 0,
     });
     setForm(empty);
     setMsg('✅ تم الحفظ');
     reload();
+  }
+
+  async function onImage(e) {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) return;
+    try {
+      const data = await resizeImage(f);
+      setForm({ ...form, image: data });
+    } catch {
+      setMsg('❌ تعذر قراءة الصورة');
+    }
   }
 
   // استيراد: كل سطر "كود , اسم , سعر , تكلفة , مخزون" — يقبل الفاصلة أو Tab (لصق من إكسل)
@@ -134,6 +170,28 @@ export default function ProductsPage() {
             <input type="number" step="any" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} /></label>
           <label className="field"><span>باركود (اختياري)</span>
             <input value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} dir="ltr" /></label>
+          <label className="field"><span>سعر الجملة</span>
+            <input type="number" step="any" value={form.priceWholesale} onChange={(e) => setForm({ ...form, priceWholesale: e.target.value })} /></label>
+          <label className="field"><span>سعر الموزعين</span>
+            <input type="number" step="any" value={form.priceDistributor} onChange={(e) => setForm({ ...form, priceDistributor: e.target.value })} /></label>
+          <label className="field"><span>اسم العبوة (كرتونة/دستة)</span>
+            <input value={form.packName} onChange={(e) => setForm({ ...form, packName: e.target.value })} placeholder="كرتونة" /></label>
+          <label className="field"><span>قطع في العبوة</span>
+            <input type="number" step="any" value={form.packQty} onChange={(e) => setForm({ ...form, packQty: e.target.value })} placeholder="12" /></label>
+          <label className="field"><span>سعر العبوة</span>
+            <input type="number" step="any" value={form.packPrice} onChange={(e) => setForm({ ...form, packPrice: e.target.value })} /></label>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <label className="btn" style={{ cursor: 'pointer' }}>
+              📷 {form.image ? 'تغيير الصورة' : 'صورة الصنف'}
+              <input type="file" accept="image/*" hidden onChange={onImage} />
+            </label>
+            {form.image && (
+              <>
+                <img src={form.image} alt="" className="thumb" />
+                <button type="button" className="btn-sm btn-red" onClick={() => setForm({ ...form, image: '' })}>✕</button>
+              </>
+            )}
+          </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn-green">💾 حفظ</button>
             {form.id && <button type="button" onClick={() => setForm(empty)}>إلغاء</button>}
@@ -204,14 +262,16 @@ export default function ProductsPage() {
         <div style={{ overflowX: 'auto' }}>
           <table className="tbl">
             <thead>
-              <tr><th>الكود</th><th>اسم الصنف</th><th>سعر البيع</th><th>التكلفة</th><th>المخزون</th><th>إجراءات</th></tr>
+              <tr><th></th><th>الكود</th><th>اسم الصنف</th><th>قطاعي</th><th>جملة</th><th>التكلفة</th><th>المخزون</th><th>إجراءات</th></tr>
             </thead>
             <tbody>
               {filtered.map((p) => (
                 <tr key={p.id}>
+                  <td>{p.image ? <img src={p.image} alt="" className="thumb" /> : <span className="muted">—</span>}</td>
                   <td><b>{p.code}</b></td>
-                  <td>{p.name}</td>
+                  <td>{p.name}{p.packQty > 0 ? <small className="muted"> ({p.packName || 'عبوة'} {p.packQty})</small> : ''}</td>
                   <td>{num(p.price, ar)}</td>
+                  <td>{(p.priceWholesale || 0) > 0 ? num(p.priceWholesale, ar) : <span className="muted">—</span>}</td>
                   <td className="muted">{num(p.cost || 0, ar)}</td>
                   <td>
                     <span className={`badge ${(Number(p.stock) || 0) <= (settings.lowStock || 5) ? 'red' : 'green'}`}>

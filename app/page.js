@@ -13,7 +13,10 @@ export default function Dashboard() {
     const products = listProducts();
     const today = new Date().toDateString();
     const todayInv = invoices.filter((i) => new Date(i.date).toDateString() === today);
-    const todaySales = todayInv.reduce((sum, i) => sum + (i.totals?.net || 0), 0);
+    const todaySales = todayInv.reduce(
+      (sum, i) => sum + (i.type === 'مرتجع' ? -1 : 1) * (i.totals?.net || 0),
+      0
+    );
     const lowStock = products.filter((p) => (Number(p.stock) || 0) <= (Number(s.lowStock) || 5));
     const debt = invoices.reduce((sum, i) => sum + Math.max(0, i.totals?.remaining || 0), 0);
     setData({ s, invoices, todayInv, todaySales, lowStock, debt, customers: listCustomers().length });

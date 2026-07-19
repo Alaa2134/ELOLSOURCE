@@ -120,6 +120,76 @@ export default function WhatsappPage() {
         </div>
       </div>
 
+      <div className="grid cols-3">
+        <div className="card">
+          <h3>📊 تقرير آخر اليوم للأدمن</h3>
+          <label style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10, cursor: 'pointer' }}>
+            <input type="checkbox" style={{ width: 'auto' }} checked={settings.dailyReport.enabled}
+              onChange={(e) => {
+                const next = saveSettings({ dailyReport: { ...settings.dailyReport, enabled: e.target.checked } });
+                setSettings(next);
+              }} />
+            تفعيل التقرير اليومي التلقائي
+          </label>
+          <label className="field" style={{ marginBottom: 8 }}>
+            <span>الساعة (24 ساعة)</span>
+            <input type="number" min="0" max="23" value={settings.dailyReport.hour}
+              onChange={(e) => setSettings(saveSettings({ dailyReport: { ...settings.dailyReport, hour: Number(e.target.value) || 21 } }))} />
+          </label>
+          <p className="muted" style={{ fontSize: 12 }}>
+            مبيعات ومحصل ومصاريف وصافي الدرج وفلوس المندوبين — بيتبعت لرقم الأدمن اللي في كارت الإشعارات.
+          </p>
+        </div>
+
+        <div className="card">
+          <h3>🔔 إشعارات فورية للأدمن</h3>
+          <label style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10, cursor: 'pointer' }}>
+            <input type="checkbox" style={{ width: 'auto' }} checked={settings.alerts.enabled}
+              onChange={(e) => setSettings(saveSettings({ alerts: { ...settings.alerts, enabled: e.target.checked } }))} />
+            تفعيل الإشعارات
+          </label>
+          <label className="field" style={{ marginBottom: 8 }}>
+            <span>رقم واتساب الأدمن</span>
+            <input dir="ltr" placeholder="01xxxxxxxxx" value={settings.alerts.adminPhone}
+              onChange={(e) => setSettings(saveSettings({ alerts: { ...settings.alerts, adminPhone: e.target.value.trim() } }))} />
+          </label>
+          <label className="field">
+            <span>إشعار لو فاتورة أكبر من</span>
+            <input type="number" min="0" value={settings.alerts.bigInvoice}
+              onChange={(e) => setSettings(saveSettings({ alerts: { ...settings.alerts, bigInvoice: Number(e.target.value) || 0 } }))} />
+          </label>
+          <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+            بيوصلك إشعار عند: فاتورة كبيرة، حذف فاتورة، وعجز في إقفال اليومية.
+          </p>
+        </div>
+
+        <div className="card">
+          <h3>📕 تذكير المديونيات الأسبوعي</h3>
+          <label style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10, cursor: 'pointer' }}>
+            <input type="checkbox" style={{ width: 'auto' }} checked={settings.debtReminder.enabled}
+              onChange={(e) => setSettings(saveSettings({ debtReminder: { ...settings.debtReminder, enabled: e.target.checked } }))} />
+            تفعيل التذكير الأسبوعي
+          </label>
+          <label className="field" style={{ marginBottom: 8 }}>
+            <span>اليوم</span>
+            <select value={settings.debtReminder.weekday}
+              onChange={(e) => setSettings(saveSettings({ debtReminder: { ...settings.debtReminder, weekday: Number(e.target.value) } }))}>
+              <option value={0}>الأحد</option><option value={1}>الاثنين</option><option value={2}>الثلاثاء</option>
+              <option value={3}>الأربعاء</option><option value={4}>الخميس</option><option value={5}>الجمعة</option>
+              <option value={6}>السبت</option>
+            </select>
+          </label>
+          <label className="field">
+            <span>نص الرسالة — متغيرات: {'{name} {debt} {currency} {company}'}</span>
+            <textarea rows={4} value={settings.debtReminder.template}
+              onChange={(e) => setSettings(saveSettings({ debtReminder: { ...settings.debtReminder, template: e.target.value } }))} />
+          </label>
+          <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+            بيتبعت لكل عميل عليه مديونية (بنفس نظام الحماية: تأخير عشوائي وحد يومي).
+          </p>
+        </div>
+      </div>
+
       <div className="card">
         <h3>🛡️ نظام الحماية من الحظر</h3>
         <p className="muted" style={{ fontSize: 13, marginBottom: 10 }}>

@@ -15,10 +15,10 @@ import {
   listReps,
 } from '@/lib/db';
 import { num, todayISO, fmtDate, normalizePhone } from '@/lib/format';
-import { buildMessage, invoiceLink, waMeLink, gatewaySend, gatewayStatus } from '@/lib/wa';
+import { buildMessage, invoiceLink, waMeLink, gatewaySend, gatewayStatus, notifyAdmin } from '@/lib/wa';
 import ProductPicker from '@/components/ProductPicker';
 
-const emptyRow = () => ({ code: '', name: '', qty: 1, price: '', disc: 0, notes: '' });
+const emptyRow = () => ({ code: '', name: '', qty: 1, price: '', disc: 0, notes: '', unit: '' });
 
 export default function PosPage() {
   const router = useRouter();
@@ -88,12 +88,28 @@ export default function PosPage() {
     });
   }
 
+  // السعر حسب نوع العميل: قطاعي / جملة / موزع
+  function priceFor(p, name = customerName) {
+    const c = customers.find((x) => x.name === name);
+    if (c?.priceType === 'جملة' && Number(p.priceWholesale) > 0) return p.priceWholesale;
+    if (c?.priceType === 'موزع' && Number(p.priceDistributor) > 0) return p.priceDistributor;
+    return p.price;
+  }
+
   function lookupCode(i, code) {
     const p = findProduct(code);
     if (p) {
-      updateRow(i, { code: p.code, name: p.name, price: p.price });
+      updateRow(i, { code: p.code, name: p.name, price: priceFor(p), unit: '' });
       focusCell(i, 'qty');
     }
+  }
+
+  // تبديل الوحدة: قطعة أو عبوة (كرتونة/دستة) — بيغير السعر وخصم المخزون
+  function toggleUnit(i, r) {
+    const p = products.find((x) => String(x.code) === String(r.code));
+    if (!p || !(Number(p.packQty) > 0) || !(Number(p.packPrice) > 0)) return;
+    if (r.unit === 'pack') updateRow(i, { unit: '', price: priceFor(p) });
+    else updateRow(i, { unit: 'pack', price: p.packPrice });
   }
 
   function focusCell(row, col) {
@@ -118,21 +134,53 @@ export default function PosPage() {
     setCustomerName(name);
     const c = customers.find((x) => x.name === name);
     if (c && c.phone) setCustomerPhone(c.phone);
+    // إعادة تسعير الأصناف الموجودة حسب نوع سعر العميل (جملة/موزع)
+    if (c) {
+      setRows((prev) =>
+        prev.map((r) => {
+          if (r.unit === 'pack') return r;
+          const p = products.find((x) => String(x.code) === String(r.code));
+          return p ? { ...r, price: priceFor(p, name) } : r;
+        })
+      );
+    }
   }
 
   async function save(andPrint) {
     const items = rows
       .filter((r) => (r.code || r.name) && Number(r.qty) > 0)
-      .map((r) => ({
-        code: r.code,
-        name: r.name,
-        qty: Number(r.qty) || 0,
-        price: Number(r.price) || 0,
-        disc: Number(r.disc) || 0,
-        notes: r.notes || '',
-        total: lineTotal(r),
-      }));
+      .map((r) => {
+        const p = products.find((x) => String(x.code) === String(r.code));
+        const isPack = r.unit === 'pack' && p && Number(p.packQty) > 0;
+        return {
+          code: r.code,
+          name: isPack ? `${r.name} (${p.packName || 'عبوة'})` : r.name,
+          qty: Number(r.qty) || 0,
+          stockQty: isPack ? (Number(r.qty) || 0) * Number(p.packQty) : Number(r.qty) || 0,
+          price: Number(r.price) || 0,
+          disc: Number(r.disc) || 0,
+          notes: r.notes || '',
+          total: lineTotal(r),
+        };
+      });
     if (!items.length && !debtAdd) { showToast('⚠️ أضف صنف واحد على الأقل'); return; }
+
+    // فحص حد الائتمان قبل البيع الآجل
+    if (remaining > 0 && customerName) {
+      const c = customers.find((x) => x.name === customerName);
+      const limit = Number(c?.creditLimit) || 0;
+      const newDebt = (prevDebt - debtAdd) + remaining;
+      if (limit > 0 && newDebt > limit) {
+        if (role === 'admin') {
+          if (!confirm(`⚠️ تجاوز حد الائتمان!\nحد العميل: ${limit}\nمديونيته هتوصل: ${newDebt.toFixed(2)}\n\nتكمل على مسئوليتك؟`)) return;
+        } else {
+          const pass = prompt(
+            `⛔ العميل هيتجاوز حد الائتمان (${limit} — هيوصل ${newDebt.toFixed(2)})\nمحتاج موافقة الأدمن: اكتب كلمة سر الأدمن للمتابعة`
+          );
+          if (pass !== settings.adminPassword) { showToast('⛔ اتلغت — تجاوز حد الائتمان'); return; }
+        }
+      }
+    }
 
     if (customerName && !customers.find((c) => c.name === customerName)) {
       saveCustomer({ name: customerName, phone: customerPhone, address: '' });
@@ -170,6 +218,11 @@ export default function PosPage() {
     setProducts(listProducts());
     setCustomers(listCustomers());
     showToast(`✅ تم حفظ الفاتورة رقم ${inv.number}`);
+
+    // إشعار الأدمن بالفواتير الكبيرة
+    if (net >= (Number(settings.alerts?.bigInvoice) || Infinity)) {
+      notifyAdmin(`🧾 فاتورة كبيرة رقم ${inv.number} بقيمة ${net.toFixed(2)} ${settings.currency} للعميل ${inv.customer.name}`);
+    }
 
     const wa = settings?.wa || {};
     if (wa.autoSend && wa.gatewayUrl && customerPhone) {
@@ -328,15 +381,33 @@ export default function PosPage() {
                       />
                     </td>
                     <td>
-                      <ProductPicker
-                        dataR={i} dataC="name"
-                        value={r.name}
-                        products={products}
-                        arabicDigits={ar}
-                        onType={(v) => updateRow(i, { name: v })}
-                        onSelect={(p) => { updateRow(i, { code: p.code, name: p.name, price: p.price }); focusCell(i, 'qty'); }}
-                        onNavKey={(e) => onKey(e, i, 'name')}
-                      />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <div style={{ flex: 1 }}>
+                          <ProductPicker
+                            dataR={i} dataC="name"
+                            value={r.name}
+                            products={products}
+                            arabicDigits={ar}
+                            onType={(v) => updateRow(i, { name: v })}
+                            onSelect={(p) => { updateRow(i, { code: p.code, name: p.name, price: priceFor(p), unit: '' }); focusCell(i, 'qty'); }}
+                            onNavKey={(e) => onKey(e, i, 'name')}
+                          />
+                        </div>
+                        {(() => {
+                          const p = products.find((x) => String(x.code) === String(r.code));
+                          if (!p || !(Number(p.packQty) > 0) || !(Number(p.packPrice) > 0)) return null;
+                          return (
+                            <button
+                              type="button" tabIndex={-1}
+                              className={`btn-sm ${r.unit === 'pack' ? 'btn-accent' : ''}`}
+                              title={`${p.packName || 'عبوة'} = ${p.packQty} قطعة`}
+                              onClick={() => toggleUnit(i, r)}
+                            >
+                              {r.unit === 'pack' ? `📦 ${p.packName || 'عبوة'}` : 'قطعة'}
+                            </button>
+                          );
+                        })()}
+                      </div>
                     </td>
                     <td>
                       <input

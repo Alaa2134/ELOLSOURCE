@@ -1,0 +1,198 @@
+'use client';
+// فواتير المشتريات من الموردين: بتزود المخزون وبتحدث التكلفة تلقائياً
+import { useEffect, useMemo, useState } from 'react';
+import {
+  listProducts,
+  findProduct,
+  listSuppliers,
+  listPurchases,
+  savePurchase,
+  nextPurchaseNumber,
+  supplierDebt,
+  getSettings,
+} from '@/lib/db';
+import { num, fmtDate, todayISO } from '@/lib/format';
+
+const emptyRow = () => ({ code: '', name: '', qty: 1, cost: '' });
+
+export default function PurchasesPage() {
+  const [settings, setSettings] = useState(null);
+  const [products, setProducts] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
+  const [purchases, setPurchases] = useState([]);
+  const [rows, setRows] = useState([emptyRow()]);
+  const [supplierName, setSupplierName] = useState('');
+  const [supplierPhone, setSupplierPhone] = useState('');
+  const [paid, setPaid] = useState('');
+  const [toast, setToast] = useState('');
+
+  function reload() {
+    setSettings(getSettings());
+    setProducts(listProducts());
+    setSuppliers(listSuppliers());
+    setPurchases(listPurchases());
+  }
+  useEffect(reload, []);
+
+  const subtotal = useMemo(
+    () => rows.reduce((s, r) => s + (Number(r.qty) || 0) * (Number(r.cost) || 0), 0),
+    [rows]
+  );
+
+  if (!settings) return null;
+  const ar = settings.arabicDigits;
+  const paidNum = paid === '' ? subtotal : Number(paid) || 0;
+
+  function showToast(m) {
+    setToast(m);
+    setTimeout(() => setToast(''), 3500);
+  }
+
+  function updateRow(i, patch) {
+    setRows((prev) => {
+      const next = prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r));
+      const last = next[next.length - 1];
+      if (last.code || last.name) next.push(emptyRow());
+      return next;
+    });
+  }
+
+  function lookupCode(i, code) {
+    const p = findProduct(code);
+    if (p) updateRow(i, { code: p.code, name: p.name, cost: p.cost || p.price });
+  }
+
+  function save() {
+    const items = rows
+      .filter((r) => (r.code || r.name) && Number(r.qty) > 0)
+      .map((r) => ({
+        code: r.code || r.name.slice(0, 8),
+        name: r.name,
+        qty: Number(r.qty) || 0,
+        cost: Number(r.cost) || 0,
+        total: (Number(r.qty) || 0) * (Number(r.cost) || 0),
+      }));
+    if (!items.length) { showToast('⚠️ أضف صنف واحد على الأقل'); return; }
+    if (!supplierName) { showToast('⚠️ اكتب اسم المورد'); return; }
+    const p = savePurchase({
+      number: nextPurchaseNumber(),
+      date: todayISO(),
+      supplier: { name: supplierName, phone: supplierPhone },
+      items,
+      totals: { net: subtotal, paid: paidNum, remaining: subtotal - paidNum },
+    });
+    setRows([emptyRow()]);
+    setPaid('');
+    reload();
+    showToast(`✅ تم حفظ فاتورة الشراء ${p.number} — المخزون والتكلفة اتحدثوا`);
+  }
+
+  // مديونياتنا للموردين
+  const supplierDebts = suppliers
+    .map((s) => ({ ...s, debt: supplierDebt(s.name) }))
+    .filter((s) => s.debt > 0);
+
+  return (
+    <div>
+      <div className="card">
+        <h3>📥 فاتورة شراء جديدة</h3>
+        <div className="grid cols-3" style={{ marginBottom: 12 }}>
+          <label className="field">
+            <span>المورد</span>
+            <input list="sup-list" value={supplierName} onChange={(e) => setSupplierName(e.target.value)} placeholder="اسم المورد..." />
+            <datalist id="sup-list">{suppliers.map((s) => <option key={s.id} value={s.name} />)}</datalist>
+          </label>
+          <label className="field">
+            <span>هاتف المورد</span>
+            <input dir="ltr" value={supplierPhone} onChange={(e) => setSupplierPhone(e.target.value)} />
+          </label>
+          <label className="field">
+            <span>المدفوع (فاضي = كله نقدي)</span>
+            <input type="number" min="0" step="any" value={paid} onChange={(e) => setPaid(e.target.value)} placeholder={String(subtotal)} />
+          </label>
+        </div>
+        {supplierName && supplierDebt(supplierName) > 0 && (
+          <div className="debt-alert" style={{ marginBottom: 10 }}>
+            💰 عليك للمورد ده: <b>{num(supplierDebt(supplierName), ar)} {settings.currency}</b>
+          </div>
+        )}
+        <table className="pos-grid">
+          <thead>
+            <tr>
+              <th style={{ width: 90 }}>الكود</th>
+              <th>اسم الصنف (لو جديد هيتضاف تلقائياً)</th>
+              <th style={{ width: 80 }}>الكمية</th>
+              <th style={{ width: 100 }}>سعر الشراء</th>
+              <th style={{ width: 100 }}>الإجمالي</th>
+              <th style={{ width: 40 }}></th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={i}>
+                <td><input className="num" value={r.code}
+                  onChange={(e) => updateRow(i, { code: e.target.value })}
+                  onBlur={(e) => e.target.value && !r.name && lookupCode(i, e.target.value)} /></td>
+                <td><input list="prod-names" value={r.name}
+                  onChange={(e) => {
+                    const p = products.find((x) => x.name === e.target.value);
+                    updateRow(i, p ? { code: p.code, name: p.name, cost: p.cost || p.price } : { name: e.target.value });
+                  }} /></td>
+                <td><input className="num" type="number" min="0" step="any" value={r.qty} onChange={(e) => updateRow(i, { qty: e.target.value })} /></td>
+                <td><input className="num" type="number" min="0" step="any" value={r.cost} onChange={(e) => updateRow(i, { cost: e.target.value })} /></td>
+                <td className="total-cell">{num((Number(r.qty) || 0) * (Number(r.cost) || 0), ar)}</td>
+                <td style={{ textAlign: 'center' }}>
+                  <button className="btn-sm btn-red" tabIndex={-1}
+                    onClick={() => setRows((p) => p.filter((_, x) => x !== i).length ? p.filter((_, x) => x !== i) : [emptyRow()])}>✕</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <datalist id="prod-names">{products.map((p) => <option key={p.id} value={p.name} />)}</datalist>
+        <div style={{ display: 'flex', gap: 12, marginTop: 12, alignItems: 'center' }}>
+          <button className="btn-green" onClick={save}>💾 حفظ فاتورة الشراء</button>
+          <b>الإجمالي: {num(subtotal, ar)} {settings.currency}</b>
+        </div>
+      </div>
+
+      <div className="grid cols-2" style={{ alignItems: 'start' }}>
+        <div className="card">
+          <h3>📜 آخر المشتريات</h3>
+          <table className="tbl">
+            <thead><tr><th>رقم</th><th>التاريخ</th><th>المورد</th><th>الإجمالي</th><th>المتبقي علينا</th></tr></thead>
+            <tbody>
+              {purchases.slice(0, 12).map((p) => (
+                <tr key={p.id}>
+                  <td><b>{num(p.number, ar)}</b></td>
+                  <td>{fmtDate(p.date, ar)}</td>
+                  <td>{p.supplier?.name}</td>
+                  <td>{num(p.totals?.net || 0, ar)}</td>
+                  <td>{(p.totals?.remaining || 0) > 0 ? <span className="red-text">{num(p.totals.remaining, ar)}</span> : '—'}</td>
+                </tr>
+              ))}
+              {!purchases.length && <tr><td colSpan={5} className="muted">لا توجد مشتريات بعد</td></tr>}
+            </tbody>
+          </table>
+        </div>
+        <div className="card">
+          <h3>🏭 مديونياتنا للموردين</h3>
+          <table className="tbl">
+            <thead><tr><th>المورد</th><th>الهاتف</th><th>عليك له</th></tr></thead>
+            <tbody>
+              {supplierDebts.map((s) => (
+                <tr key={s.id}>
+                  <td><b>{s.name}</b></td>
+                  <td dir="ltr">{s.phone || '—'}</td>
+                  <td><span className="badge red">{num(s.debt, ar)} {settings.currency}</span></td>
+                </tr>
+              ))}
+              {!supplierDebts.length && <tr><td colSpan={3} className="muted">مفيش مديونيات لموردين ✅</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {toast && <div className="toast">{toast}</div>}
+    </div>
+  );
+}

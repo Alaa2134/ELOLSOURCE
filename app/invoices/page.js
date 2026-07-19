@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { listInvoices, deleteInvoice, getSettings, isAdmin } from '@/lib/db';
 import { num, fmtDate, fmtTime } from '@/lib/format';
-import { waMeLink, buildMessage, invoiceLink } from '@/lib/wa';
+import { waMeLink, buildMessage, invoiceLink, notifyAdmin } from '@/lib/wa';
 
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState([]);
@@ -63,7 +63,10 @@ export default function InvoicesPage() {
           <tbody>
             {filtered.map((i) => (
               <tr key={i.id}>
-                <td><b>{num(i.number, ar)}</b></td>
+                <td>
+                  <b>{num(i.number, ar)}</b>
+                  {i.type === 'مرتجع' && <span className="badge red" style={{ marginRight: 6 }}>↩️ مرتجع{i.refNumber ? ` من ${num(i.refNumber, ar)}` : ''}</span>}
+                </td>
                 <td>{fmtDate(i.date, ar)}</td>
                 <td>{fmtTime(i.date, ar)}</td>
                 <td>{i.customer?.name}</td>
@@ -73,6 +76,7 @@ export default function InvoicesPage() {
                 <td>{(i.totals?.remaining || 0) > 0 ? <span className="red-text">{num(i.totals.remaining, ar)}</span> : '—'}</td>
                 <td style={{ display: 'flex', gap: 6 }}>
                   <Link className="btn btn-sm btn-primary" href={`/print/${i.id}`}>🖨️ طباعة</Link>
+                  {i.type !== 'مرتجع' && <Link className="btn btn-sm" href={`/returns?inv=${i.id}`} title="عمل مرتجع">↩️</Link>}
                   {i.customer?.phone && (
                     <a className="btn btn-sm btn-green" target="_blank" rel="noreferrer" href={waMeLink(i.customer.phone, waMsg(i))}>💬</a>
                   )}
@@ -82,6 +86,7 @@ export default function InvoicesPage() {
                       onClick={() => {
                         if (confirm(`حذف الفاتورة رقم ${i.number}؟ سيتم إرجاع الكميات للمخزون.`)) {
                           deleteInvoice(i.id);
+                          notifyAdmin(`🗑️ تم حذف فاتورة رقم ${i.number} (${i.customer?.name}) بقيمة ${i.totals?.net || 0}`);
                           reload();
                         }
                       }}
