@@ -1,6 +1,6 @@
 // Service Worker لنظام كاشير السقا — شغل بدون إنترنت
 // استراتيجية: الشبكة أولاً وحفظ نسخة، ولو النت قاطع نرجع للنسخة المحفوظة
-const CACHE = 'saqqa-pos-v1';
+const CACHE = 'saqqa-pos-v2';
 
 self.addEventListener('install', () => self.skipWaiting());
 
@@ -14,6 +14,21 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
+
+  // الخطوط: من الكاش فوراً بعد أول مرة — تحميل أسرع بكتير
+  if (url.host === 'fonts.googleapis.com' || url.host === 'fonts.gstatic.com') {
+    e.respondWith(
+      caches.open(CACHE).then(async (cache) => {
+        const hit = await cache.match(e.request);
+        if (hit) return hit;
+        const res = await fetch(e.request);
+        if (res.ok || res.type === 'opaque') cache.put(e.request, res.clone());
+        return res;
+      })
+    );
+    return;
+  }
+
   if (url.origin !== location.origin) return; // مانتدخلش في Supabase أو بوابة الواتساب
 
   e.respondWith(

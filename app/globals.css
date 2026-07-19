@@ -650,6 +650,17 @@ table.tbl tr:hover td { background: #fef3ec; }
   padding: 5px 8px;
 }
 
+/* معالج الربط في لوحة الأدمن */
+.wizard-step {
+  background: #f7f9fb;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+}
+.wizard-step h4 { color: var(--brand); margin-bottom: 8px; display: flex; gap: 8px; align-items: center; }
+.wizard-step ol { padding-right: 20px; display: grid; gap: 8px; font-size: 14px; line-height: 1.9; }
+
 .lock-overlay {
   position: fixed;
   inset: 0;

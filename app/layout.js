@@ -16,9 +16,12 @@ export default function RootLayout({ children }) {
         <link rel="icon" href="/icon-192.png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Amiri:wght@400;700&display=swap"
-          rel="stylesheet"
+        {/* تحميل الخطوط في الخلفية — الصفحة بتظهر فوراً من غير انتظار */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){var l=document.createElement('link');l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Amiri:wght@400;700&display=swap';document.head.appendChild(l);})();",
+          }}
         />
       </head>
       <body>
