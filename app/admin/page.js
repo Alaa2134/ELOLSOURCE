@@ -32,6 +32,23 @@ const DEMO_INVOICE = {
   totals: { subtotal: 1018.35, discount: 0, net: 1018.35, paid: 1018.35, remaining: 0 },
 };
 
+// ضغط اللوجو المرفوع لحجم مناسب
+function resizeLogo(file, maxSize = 300) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
+}
+
 const INV_TOGGLES = [
   ['showLogo', 'إظهار اللوجو'],
   ['showQr', 'إظهار QR الفاتورة'],
@@ -331,11 +348,62 @@ export default function AdminPage() {
             <label className="field"><span>عدد الأصناف في الصفحة</span>
               <input type="number" min="8" max="35" value={s.invoice.rowsPerPage}
                 onChange={(e) => setS({ ...s, invoice: { ...s.invoice, rowsPerPage: Number(e.target.value) || 22 } })} /></label>
+            <label className="field"><span>شكل الأرقام في الفاتورة</span>
+              <select value={s.arabicDigits ? 'عربي' : 'إنجليزي'}
+                onChange={(e) => setS({ ...s, arabicDigits: e.target.value === 'عربي' })}>
+                <option value="عربي">عربي (١٢٣)</option>
+                <option value="إنجليزي">إنجليزي (123)</option>
+              </select></label>
+            <label className="field"><span>اسم الشركة</span>
+              <input value={s.companyName} onChange={(e) => setS({ ...s, companyName: e.target.value })} /></label>
+            <label className="field"><span>عنوان المستند</span>
+              <input value={s.docTitle} onChange={(e) => setS({ ...s, docTitle: e.target.value })} /></label>
+            <label className="field"><span>التليفونات (أسفل الفاتورة)</span>
+              <input value={s.phones} onChange={(e) => setS({ ...s, phones: e.target.value })} /></label>
             <label className="field"><span>سطر أسفل الفاتورة (سياسة الاستبدال مثلاً)</span>
               <input value={s.invoice.footerText} placeholder="البضاعة تُستبدل خلال 14 يوم بالفاتورة"
                 onChange={(e) => setS({ ...s, invoice: { ...s.invoice, footerText: e.target.value } })} /></label>
-            <label className="field"><span>عنوان المستند</span>
-              <input value={s.docTitle} onChange={(e) => setS({ ...s, docTitle: e.target.value })} /></label>
+
+            <div className="field"><span style={{ display: 'block', marginBottom: 4, fontSize: 13, fontWeight: 600, color: 'var(--muted)' }}>اللوجو</span>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <label className="btn btn-sm" style={{ cursor: 'pointer' }}>
+                  📷 {s.logoImage ? 'تغيير اللوجو' : 'رفع لوجو جديد'}
+                  <input type="file" accept="image/*" hidden onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = '';
+                    if (!f) return;
+                    try { setS({ ...s, logoImage: await resizeLogo(f) }); } catch { setMsg('❌ تعذر قراءة الصورة'); }
+                  }} />
+                </label>
+                <img src={s.logoImage || '/logo.jpg'} alt="" className="thumb" />
+                {s.logoImage && (
+                  <button type="button" className="btn-sm btn-red" onClick={() => setS({ ...s, logoImage: '' })}>
+                    رجّع لوجو ALSAKA
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="field"><span style={{ display: 'block', marginBottom: 4, fontSize: 13, fontWeight: 600, color: 'var(--muted)' }}>
+              خانات إضافية في بيانات الفاتورة (سيبها فاضية لو مش عايزها)</span>
+              {[0, 1, 2].map((i) => {
+                const cf = (s.invoice.customFields || [])[i] || { label: '', value: '' };
+                const update = (patch) => {
+                  const next = [...(s.invoice.customFields || [])];
+                  while (next.length <= i) next.push({ label: '', value: '' });
+                  next[i] = { ...next[i], ...patch };
+                  setS({ ...s, invoice: { ...s.invoice, customFields: next } });
+                };
+                return (
+                  <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                    <input placeholder={`اسم الخانة ${i + 1} (مثلاً: سجل تجاري)`} value={cf.label}
+                      onChange={(e) => update({ label: e.target.value })} />
+                    <input placeholder="قيمتها" value={cf.value}
+                      onChange={(e) => update({ value: e.target.value })} />
+                  </div>
+                );
+              })}
+            </div>
             <p className="muted" style={{ fontSize: 12 }}>💡 متنساش تضغط "حفظ إعدادات الأدمن" تحت — وهيسري على كل الأجهزة</p>
           </div>
           <div className="inv-preview-wrap">

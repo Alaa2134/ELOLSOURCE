@@ -10,6 +10,7 @@ import {
   cloudEnabled,
   flushPending,
   getRole,
+  listInvoices,
   getSupabase,
   runDailyBackup,
   ensureFullPush,
@@ -62,6 +63,7 @@ export default function Shell({ children }) {
   const [lockErr, setLockErr] = useState('');
   const [printers, setPrinters] = useState([]);
   const [printerName, setPrinterName] = useState('');
+  const [invQ, setInvQ] = useState(''); // بحث سريع برقم الفاتورة
   const lastBeat = useRef(Date.now());
 
   const bare =
@@ -213,6 +215,23 @@ export default function Shell({ children }) {
         <header className="topbar no-print">
           <div className="title">{current ? current.title : s.companyName}</div>
           <div className="meta">
+            <input
+              className="printer-select"
+              style={{ maxWidth: 140 }}
+              placeholder="🔍 رقم فاتورة + Enter"
+              value={invQ}
+              onChange={(e) => setInvQ(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key !== 'Enter' || !invQ.trim()) return;
+                const inv = listInvoices().find((x) => String(x.number) === invQ.trim());
+                if (inv) {
+                  setInvQ('');
+                  router.push(`/print/${inv.id}`);
+                } else {
+                  alert(`مفيش فاتورة بالرقم ${invQ.trim()}`);
+                }
+              }}
+            />
             <select
               className="printer-select"
               title="اختيار الطابعة"
