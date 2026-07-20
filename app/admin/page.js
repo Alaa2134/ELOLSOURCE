@@ -244,6 +244,39 @@ export default function AdminPage() {
           </ol>
         </div>
 
+        {wizUrl && wizKey && (
+          <div className="wizard-step" style={{ borderRight: '4px solid var(--red)' }}>
+            <h4>⭐ خطوة مهمة: علشان QR الفاتورة يفتح مع العميل دايماً</h4>
+            <p className="muted" style={{ fontSize: 13, marginBottom: 8 }}>
+              من غيرها رابط الفاتورة بيشتغل بس من الروابط الجديدة — معاها أي QR (حتى المطبوع قديم) بيفتح مع أي عميل للأبد. مرة واحدة و3 دقايق:
+            </p>
+            <ol>
+              <li>
+                <a className="btn btn-primary btn-sm" href="https://vercel.com/alaas-projects-f306dc93/alsaka/settings/environment-variables" target="_blank" rel="noreferrer">
+                  🌐 افتح إعدادات موقعك في Vercel
+                </a>
+                &nbsp;(سجل دخول بجيتهاب لو طلب)
+              </li>
+              <li>
+                في خانة <b>Key</b> اكتب: <code dir="ltr">NEXT_PUBLIC_SUPABASE_URL</code>
+                &nbsp;وفي خانة <b>Value</b> الصق: <CopyBtn text={wizUrl} label="📋 انسخ القيمة الأولى" />
+                &nbsp;← اضغط <b>Save</b>
+              </li>
+              <li>
+                تاني: <b>Key</b> = <code dir="ltr">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>
+                &nbsp;و<b>Value</b> = <CopyBtn text={wizKey} label="📋 انسخ القيمة التانية" />
+                &nbsp;← <b>Save</b>
+              </li>
+              <li>
+                <a className="btn btn-primary btn-sm" href="https://vercel.com/alaas-projects-f306dc93/alsaka" target="_blank" rel="noreferrer">
+                  🌐 افتح صفحة المشروع
+                </a>
+                &nbsp;← تاب <b>Deployments</b> ← النقط الثلاثة ⋯ جنب أول واحد ← <b>Redeploy</b> ← واستنى دقيقتين. خلاص! 🎉
+              </li>
+            </ol>
+          </div>
+        )}
+
         <div className="wizard-step">
           <h4>2️⃣ نسخة احتياطية يومية على جوجل درايف {s.backupUrl && <span className="badge green">✅ متفعلة</span>}</h4>
           <ol>
