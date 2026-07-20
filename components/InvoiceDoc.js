@@ -60,12 +60,20 @@ export default function InvoiceDoc({ invoice, settings, qrDataUrl, paper = 'a4' 
                 <td style={{ textAlign: 'center' }}>{invoice.customer?.address || ''}</td>
               </tr>
             )}
+            {(opt.customFields || [])
+              .filter((f) => f && f.label)
+              .map((f, i) => (
+                <tr key={`cf${i}`}>
+                  <td className="k">{f.label}</td>
+                  <td style={{ textAlign: 'center' }}>{f.value || ''}</td>
+                </tr>
+              ))}
           </tbody>
         </table>
       </div>
       {opt.showLogo !== false && (
         <div className="logo-print">
-          <img src="/logo.jpg" alt="ALSAKA" style={{ width: logoPx, height: logoPx }} />
+          <img src={settings.logoImage || '/logo.jpg'} alt="لوجو" style={{ width: logoPx, height: logoPx }} />
         </div>
       )}
     </div>
