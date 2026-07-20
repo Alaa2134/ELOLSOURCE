@@ -12,18 +12,38 @@ export default function PublicInvoicePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    (async () => {
-      cloudConfigFromHash(); // رابط الفاتورة بيحمل إعداد السحابة لموبايل العميل تلقائياً
-      let inv = null;
-      if (cloudEnabled()) inv = await fetchInvoiceCloud(id);
-      if (!inv) inv = getInvoice(id);
-      setInvoice(inv);
+    let done = false;
+    const finish = (inv) => {
+      if (done) return;
+      done = true;
+      setInvoice(inv || null);
       setSettings(getSettings());
       setLoading(false);
+    };
+    (async () => {
+      cloudConfigFromHash(); // رابط الفاتورة بيحمل إعداد السحابة لموبايل العميل تلقائياً
+      // مهلة 12 ثانية: لو النت ضعيف منفضلش بنحمّل للأبد — نرجع للمحلي أو رسالة واضحة
+      const timer = setTimeout(() => finish(getInvoice(id)), 12000);
+      try {
+        let inv = null;
+        if (cloudEnabled()) inv = await fetchInvoiceCloud(id);
+        if (!inv) inv = getInvoice(id);
+        clearTimeout(timer);
+        finish(inv);
+      } catch {
+        clearTimeout(timer);
+        finish(getInvoice(id));
+      }
     })();
   }, [id]);
 
-  if (loading) return <p style={{ padding: 40, textAlign: 'center' }}>جاري تحميل الفاتورة...</p>;
+  if (loading)
+    return (
+      <div style={{ padding: 40, textAlign: 'center' }}>
+        <img src="/logo.jpg" alt="" style={{ width: 80, height: 80, objectFit: 'contain', marginBottom: 12 }} />
+        <p>جاري تحميل الفاتورة...</p>
+      </div>
+    );
   if (!invoice || !settings)
     return (
       <div style={{ padding: 40, textAlign: 'center' }}>
