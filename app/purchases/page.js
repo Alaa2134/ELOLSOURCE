@@ -10,6 +10,8 @@ import {
   nextPurchaseNumber,
   supplierDebt,
   getSettings,
+  getOrder,
+  setOrderStatus,
 } from '@/lib/db';
 import { num, fmtDate, todayISO } from '@/lib/format';
 
@@ -25,6 +27,7 @@ export default function PurchasesPage() {
   const [supplierPhone, setSupplierPhone] = useState('');
   const [paid, setPaid] = useState('');
   const [toast, setToast] = useState('');
+  const [fromOrder, setFromOrder] = useState(null); // بنحوّل طلب بضاعة لفاتورة شراء
 
   function reload() {
     setSettings(getSettings());
@@ -33,6 +36,21 @@ export default function PurchasesPage() {
     setPurchases(listPurchases());
   }
   useEffect(reload, []);
+
+  // لو جايين من صفحة طلب البضاعة (?order=) بنملأ الفاتورة بأصناف الطلب — يتبقى تكتب أسعار الشراء بس
+  useEffect(() => {
+    const orderId = new URLSearchParams(window.location.search).get('order');
+    if (!orderId) return;
+    const o = getOrder(orderId);
+    if (!o) return;
+    setFromOrder(o);
+    setSupplierName(o.supplier?.name || '');
+    setSupplierPhone(o.supplier?.phone || '');
+    setRows([
+      ...(o.items || []).map((it) => ({ code: it.code, name: it.name, qty: it.qty, cost: '' })),
+      emptyRow(),
+    ]);
+  }, []);
 
   const subtotal = useMemo(
     () => rows.reduce((s, r) => s + (Number(r.qty) || 0) * (Number(r.cost) || 0), 0),
@@ -80,7 +98,12 @@ export default function PurchasesPage() {
       supplier: { name: supplierName, phone: supplierPhone },
       items,
       totals: { net: subtotal, paid: paidNum, remaining: subtotal - paidNum },
+      orderId: fromOrder?.id || undefined,
     });
+    if (fromOrder) {
+      setOrderStatus(fromOrder.id, 'اتحول لفاتورة شراء');
+      setFromOrder(null);
+    }
     setRows([emptyRow()]);
     setPaid('');
     reload();
@@ -96,6 +119,12 @@ export default function PurchasesPage() {
     <div>
       <div className="card">
         <h3>📥 فاتورة شراء جديدة</h3>
+        {fromOrder && (
+          <div className="debt-alert" style={{ marginBottom: 10 }}>
+            📋 بتحوّل <b>طلب البضاعة رقم {num(fromOrder.number, settings.arabicDigits)}</b> من {fromOrder.supplier?.name} لفاتورة شراء —
+            الأصناف والكميات اتملت تلقائياً، اكتب أسعار الشراء بس واحفظ.
+          </div>
+        )}
         <div className="grid cols-3" style={{ marginBottom: 12 }}>
           <label className="field">
             <span>المورد</span>
