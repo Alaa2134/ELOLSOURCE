@@ -359,12 +359,16 @@ export default function ProductsPage() {
           <table className="tbl">
             <thead>
               <tr>
-                <th title="تحديد الكل">
+                <th
+                  title="تحديد الكل"
+                  style={{ cursor: 'pointer', textAlign: 'center' }}
+                  onClick={() => toggleSelectAll(allFiltered)}
+                >
                   <input
                     type="checkbox"
-                    style={{ width: 'auto', cursor: 'pointer' }}
+                    readOnly
+                    style={{ pointerEvents: 'none' }}
                     checked={allFiltered.length > 0 && selected.size === allFiltered.length}
-                    onChange={() => toggleSelectAll(allFiltered)}
                   />
                 </th>
                 <th></th><th>الكود</th><th>اسم الصنف</th><th>المورد</th><th>سعر البيع</th><th>جملة</th><th>السعر المبدئي</th><th>المخزون</th><th>إجراءات</th>
@@ -373,12 +377,15 @@ export default function ProductsPage() {
             <tbody>
               {filtered.map((p) => (
                 <tr key={p.id} style={selected.has(p.id) ? { background: '#fff3ec' } : undefined}>
-                  <td>
+                  <td
+                    style={{ cursor: 'pointer', textAlign: 'center' }}
+                    onClick={() => toggleSelect(p.id)}
+                  >
                     <input
                       type="checkbox"
-                      style={{ width: 'auto', cursor: 'pointer' }}
+                      readOnly
+                      style={{ pointerEvents: 'none' }}
                       checked={selected.has(p.id)}
-                      onChange={() => toggleSelect(p.id)}
                     />
                   </td>
                   <td>{p.image ? <img src={p.image} alt="" className="thumb" /> : <span className="muted">—</span>}</td>
