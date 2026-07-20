@@ -23,6 +23,13 @@ module.exports = function startGateway(authDir) {
 
   const logger = pino({ level: 'silent' });
   const app = express();
+  // كروم بيبعت فحص "شبكة خاصة" قبل ما الموقع يكلم localhost — لازم نرد بالموافقة دي
+  app.use((req, res, next) => {
+    if (req.headers['access-control-request-private-network']) {
+      res.setHeader('Access-Control-Allow-Private-Network', 'true');
+    }
+    next();
+  });
   app.use(cors());
   app.use(express.json());
 
