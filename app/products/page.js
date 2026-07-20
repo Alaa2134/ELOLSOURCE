@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { listProducts, saveProduct, deleteProduct, getSettings } from '@/lib/db';
+import { listProducts, saveProduct, deleteProduct, getSettings, cleanProductName } from '@/lib/db';
 import { num } from '@/lib/format';
 import { parsePdfProducts } from '@/lib/pdfImport';
 
@@ -85,23 +85,38 @@ export default function ProductsPage() {
   }
 
   // استيراد: كل سطر "كود , اسم , سعر , تكلفة , مخزون" — يقبل الفاصلة أو Tab (لصق من إكسل)
+  // الموجود (بالكود أو الاسم) بيتحدث سعره — مفيش تكرار أبداً
   function doImport() {
-    let count = 0;
+    let updated = 0;
+    let added = 0;
+    const fresh = listProducts();
     for (const line of importText.split('\n')) {
       const parts = line.split(/\t|,/).map((x) => x.trim());
       if (parts.length < 3 || !parts[0] || !parts[1]) continue;
-      const existing = products.find((p) => String(p.code) === parts[0]);
-      saveProduct({
-        ...(existing || {}),
-        code: parts[0],
-        name: parts[1],
-        price: Number(parts[2]) || 0,
-        cost: Number(parts[3]) || existing?.cost || 0,
-        stock: Number(parts[4]) || existing?.stock || 0,
-      });
-      count++;
+      const existing = findExisting(fresh, parts[0], parts[1]);
+      if (existing) {
+        saveProduct({
+          ...existing,
+          price: Number(parts[2]) || existing.price,
+          cost: Number(parts[3]) || existing.cost || 0,
+          stock: parts[4] !== undefined && parts[4] !== '' ? Number(parts[4]) || 0 : existing.stock || 0,
+        });
+        updated++;
+      } else {
+        const row = saveProduct({
+          code: parts[0],
+          name: cleanProductName(parts[1]),
+          price: Number(parts[2]) || 0,
+          cost: Number(parts[3]) || 0,
+          stock: Number(parts[4]) || 0,
+          barcode: '',
+          category: 'أدوات منزلية',
+        });
+        fresh.push(row);
+        added++;
+      }
     }
-    setMsg(`✅ تم استيراد ${count} صنف`);
+    setMsg(`✅ ${added} صنف جديد — ${updated} اتحدث (من غير تكرار)`);
     setImportText('');
     setShowImport(false);
     reload();
@@ -114,7 +129,9 @@ export default function ProductsPage() {
     setPdfBusy(true);
     setMsg('');
     try {
-      const rows = await parsePdfProducts(f);
+      // بنبعت أسماء الموردين المعروفة عشان لو مكتوبة جنب اسم الصنف في الملف متتلزقش في الاسم
+      const knownSuppliers = [...new Set(products.map((p) => p.category).filter(Boolean))];
+      const rows = await parsePdfProducts(f, { knownSuppliers });
       if (!rows.length) {
         setMsg('❌ معرفتش أطلع منتجات من الملف ده — جرب ملف فيه جدول أصناف واضح');
       } else {
@@ -126,23 +143,48 @@ export default function ProductsPage() {
     setPdfBusy(false);
   }
 
+  // البحث عن صنف موجود: بالكود الأول، ولو مفيش كود بنطابق بالاسم (بعد توحيد المسافات والرموز)
+  function findExisting(list, code, name) {
+    const c = String(code || '').trim();
+    if (c) {
+      const byCode = list.find((p) => String(p.code).trim() === c);
+      if (byCode) return byCode;
+    }
+    const n = cleanProductName(name).trim();
+    if (!n) return null;
+    return list.find((p) => cleanProductName(p.name).trim() === n) || null;
+  }
+
+  // الاستيراد مش بيكرر أبداً: الموجود بيتحدث سعره — الجديد بس هو اللي بيتضاف
   function importPdfRows() {
-    let count = 0;
+    let updated = 0;
+    let added = 0;
+    let fresh = listProducts(); // أحدث نسخة (مش الحالة القديمة)
+    let nextCode = fresh.reduce((m, p) => Math.max(m, Number(p.code) || 0), 0) + 1;
     for (const r of pdfRows) {
       if (!r.checked || !r.name) continue;
-      const existing = products.find((p) => String(p.code) === String(r.code));
-      saveProduct({
-        ...(existing || {}),
-        code: r.code || r.name.slice(0, 10),
-        name: r.name,
-        price: Number(r.price) || 0,
-        cost: existing?.cost || 0,
-        stock: existing?.stock || 0,
-      });
-      count++;
+      const existing = findExisting(fresh, r.code, r.name);
+      if (existing) {
+        // موجود قبل كده → تحديث السعر بس (الاسم والمخزون والتكلفة زي ما هما)
+        saveProduct({ ...existing, price: Number(r.price) || existing.price });
+        updated++;
+      } else {
+        const code = String(r.code || '').trim() || String(nextCode++);
+        const row = saveProduct({
+          code,
+          name: cleanProductName(r.name),
+          price: Number(r.price) || 0,
+          cost: 0,
+          stock: 0,
+          barcode: '',
+          category: r.supplier || 'أدوات منزلية',
+        });
+        fresh.push(row);
+        added++;
+      }
     }
     setPdfRows(null);
-    setMsg(`✅ تم استيراد ${count} صنف من الـ PDF`);
+    setMsg(`✅ خلصنا: ${added} صنف جديد اتضاف — ${updated} صنف موجود اتحدث سعره (من غير أي تكرار)`);
     reload();
   }
 
@@ -220,13 +262,18 @@ export default function ProductsPage() {
         {pdfRows && (
           <div style={{ marginBottom: 12, background: '#fff8f2', border: '1px solid var(--accent)', padding: 12, borderRadius: 8 }}>
             <h3 style={{ marginBottom: 8 }}>📄 معاينة منتجات الـ PDF ({pdfRows.length}) — راجع وعدّل قبل الإضافة</h3>
+            <p className="muted" style={{ marginBottom: 8, fontSize: 13 }}>
+              🔁 الصنف الموجود قبل كده هيتحدث <b>سعره بس</b> — مش هيتضاف مكرر أبداً.
+            </p>
             <div style={{ maxHeight: 320, overflowY: 'auto' }}>
               <table className="tbl">
                 <thead>
-                  <tr><th></th><th>الكود</th><th>الاسم</th><th>السعر</th></tr>
+                  <tr><th></th><th>الكود</th><th>الاسم</th><th>السعر</th><th>الحالة</th></tr>
                 </thead>
                 <tbody>
-                  {pdfRows.map((r, i) => (
+                  {pdfRows.map((r, i) => {
+                    const ex = findExisting(products, r.code, r.name);
+                    return (
                     <tr key={i}>
                       <td>
                         <input type="checkbox" style={{ width: 'auto' }} checked={r.checked}
@@ -238,14 +285,20 @@ export default function ProductsPage() {
                         onChange={(e) => setPdfRows(pdfRows.map((x, xi) => xi === i ? { ...x, name: e.target.value } : x))} /></td>
                       <td><input style={{ width: 90 }} type="number" step="any" value={r.price}
                         onChange={(e) => setPdfRows(pdfRows.map((x, xi) => xi === i ? { ...x, price: e.target.value } : x))} /></td>
+                      <td>
+                        {ex
+                          ? <span className="badge orange" title={`السعر الحالي: ${ex.price}`}>🔁 موجود — هيتحدث سعره</span>
+                          : <span className="badge green">✅ جديد</span>}
+                      </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
               <button className="btn-green" onClick={importPdfRows}>
-                ✅ إضافة المحدد ({pdfRows.filter((r) => r.checked).length})
+                ✅ تنفيذ ({pdfRows.filter((r) => r.checked).length})
               </button>
               <button className="btn-red" onClick={() => setPdfRows(null)}>إلغاء</button>
             </div>

@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { listCustomers, saveCustomer, deleteCustomer, listInvoices, getSettings } from '@/lib/db';
 import { num } from '@/lib/format';
 import { waMeLink } from '@/lib/wa';
@@ -12,6 +12,7 @@ export default function CustomersPage() {
   const [settings, setSettings] = useState(null);
   const [form, setForm] = useState(empty);
   const [q, setQ] = useState('');
+  const [showCount, setShowCount] = useState(120); // عرض تدريجي عشان الصفحة متتقلش مع عملاء كتير
 
   function reload() {
     setCustomers(listCustomers());
@@ -20,19 +21,30 @@ export default function CustomersPage() {
   }
   useEffect(reload, []);
 
+  // إحصائيات كل العملاء في لفة واحدة على الفواتير (بدل لفة لكل عميل — كانت بتهنّج الصفحة)
+  const statsByName = useMemo(() => {
+    const m = new Map();
+    for (const i of invoices) {
+      const n = i.customer?.name;
+      if (!n) continue;
+      const s = m.get(n) || { count: 0, total: 0, debt: 0 };
+      s.count++;
+      s.total += i.totals?.net || 0;
+      s.debt += Math.max(0, i.totals?.remaining || 0);
+      m.set(n, s);
+    }
+    return m;
+  }, [invoices]);
+
   if (!settings) return null;
   const ar = settings.arabicDigits;
 
   function statsFor(c) {
-    const mine = invoices.filter((i) => i.customer?.name === c.name);
-    return {
-      count: mine.length,
-      total: mine.reduce((s, i) => s + (i.totals?.net || 0), 0),
-      debt: mine.reduce((s, i) => s + Math.max(0, i.totals?.remaining || 0), 0),
-    };
+    return statsByName.get(c.name) || { count: 0, total: 0, debt: 0 };
   }
 
   const filtered = customers.filter((c) => !q || c.name.includes(q) || (c.phone || '').includes(q));
+  const visibleCustomers = filtered.slice(0, showCount);
 
   function submit(e) {
     e.preventDefault();
@@ -80,7 +92,7 @@ export default function CustomersPage() {
               <tr><th>الاسم</th><th>الهاتف</th><th>العنوان</th><th>الفواتير</th><th>إجمالي التعامل</th><th>مديونية</th><th>إجراءات</th></tr>
             </thead>
             <tbody>
-              {filtered.map((c) => {
+              {visibleCustomers.map((c) => {
                 const st = statsFor(c);
                 return (
                   <tr key={c.id}>
@@ -109,6 +121,13 @@ export default function CustomersPage() {
             </tbody>
           </table>
         </div>
+        {filtered.length > showCount && (
+          <div style={{ textAlign: 'center', marginTop: 12 }}>
+            <button className="btn-primary" onClick={() => setShowCount((c) => c + 120)}>
+              ⬇️ عرض المزيد ({num(filtered.length - showCount, ar)} عميل كمان)
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
