@@ -7,6 +7,8 @@ import {
   listCustomers,
   saveCustomer,
   saveInvoice,
+  updateInvoice,
+  getInvoice,
   nextInvoiceNumber,
   listInvoices,
   getSettings,
@@ -58,8 +60,11 @@ export default function PosPage() {
   const [toast, setToast] = useState('');
   const [scanning, setScanning] = useState(false); // كاميرا الباركود
   const [isMobile, setIsMobile] = useState(false); // موبايل؟ (عشان الكاميرا)
+  const [editingInv, setEditingInv] = useState(null); // فاتورة محفوظة مفتوحة للقراءة والتعديل
+  const [navPos, setNavPos] = useState({ pos: 0, total: 0 });
   const tableRef = useRef(null);
   const scanBuf = useRef({ txt: '', t: 0 }); // بافر سكانر الباركود USB/بلوتوث
+  const editLoadRef = useRef(false); // بيمنع فحص المديونية من مسح بيانات الفاتورة المفتوحة
 
   const DRAFT_KEY = 'saqqa_pos_draft';
 
@@ -86,6 +91,10 @@ export default function PosPage() {
         setExtraDisc(d.extraDisc || 0);
         setPaid(d.paid ?? '');
         setNumber(d.number || nextInvoiceNumber());
+        if (d.editingId) {
+          const orig = getInvoice(d.editingId);
+          if (orig) setEditingInv(orig);
+        }
         restored = true;
         showToast('🔄 استرجعنا الفاتورة اللي كانت مفتوحة — كمّل من حيث وقفت');
       }
@@ -99,10 +108,10 @@ export default function PosPage() {
     try {
       localStorage.setItem(
         DRAFT_KEY,
-        JSON.stringify({ rows, number, payment, customerName, customerPhone, extraDisc, paid, rep })
+        JSON.stringify({ rows, number, payment, customerName, customerPhone, extraDisc, paid, rep, editingId: editingInv?.id })
       );
     } catch {}
-  }, [rows, number, payment, customerName, customerPhone, extraDisc, paid, rep, saved, settings]);
+  }, [rows, number, payment, customerName, customerPhone, extraDisc, paid, rep, saved, settings, editingInv]);
 
   // سكانر الباركود USB/بلوتوث: بيكتب بسرعة عالية وينهي بـ Enter — بنلتقطه من أي مكان في الشاشة
   useEffect(() => {
@@ -130,8 +139,9 @@ export default function PosPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [products, customerName]);
 
-  // تنبيه المديونية عند اختيار العميل
+  // تنبيه المديونية عند اختيار العميل — بيتعطل لحظة فتح فاتورة محفوظة عشان قيمها المسجلة متتمسحش
   useEffect(() => {
+    if (editLoadRef.current) { editLoadRef.current = false; return; }
     setPrevDebt(customerName ? customerDebt(customerName) : 0);
     setIncludeDebt(false);
   }, [customerName]);
@@ -263,6 +273,7 @@ export default function PosPage() {
           name: isPack ? `${r.name} (${p.packName || 'عبوة'})` : r.name,
           qty: Number(r.qty) || 0,
           stockQty: isPack ? (Number(r.qty) || 0) * Number(p.packQty) : Number(r.qty) || 0,
+          unit: isPack ? 'pack' : '',
           price: Number(r.price) || 0,
           disc: Number(r.disc) || 0,
           notes: r.notes || '',
@@ -293,6 +304,37 @@ export default function PosPage() {
     } else if (customerName && customerPhone) {
       const c = customers.find((x) => x.name === customerName);
       if (c && !c.phone) saveCustomer({ ...c, phone: customerPhone });
+    }
+
+    // تعديل فاتورة محفوظة: بنحدّث نفس الفاتورة (المخزون بيتظبط بفرق التعديل تلقائياً)
+    if (editingInv) {
+      const inv = updateInvoice({
+        ...editingInv,
+        payment,
+        rep: rep.trim(),
+        repStatus: rep.trim() ? (editingInv.repStatus || 'مع المندوب') : '',
+        customer: {
+          ...editingInv.customer,
+          name: customerName || 'عميل نقدي',
+          phone: customerPhone,
+          address: customers.find((c) => c.name === customerName)?.address || editingInv.customer?.address || '',
+        },
+        items,
+        totals: {
+          subtotal,
+          discount: lineDiscs + (Number(extraDisc) || 0),
+          prevBalance: debtAdd,
+          net,
+          paid: paidNum,
+          remaining,
+        },
+      });
+      localStorage.removeItem(DRAFT_KEY);
+      setSaved(inv);
+      setProducts(listProducts());
+      showToast(`✅ اتحفظ التعديل على الفاتورة رقم ${inv.number}`);
+      if (andPrint) router.push(`/print/${inv.id}?auto=1`);
+      return;
     }
 
     const inv = saveInvoice({
@@ -371,16 +413,64 @@ export default function PosPage() {
     setReps(listReps());
     setPrevDebt(0);
     setIncludeDebt(false);
+    setEditingInv(null);
+    setNavPos({ pos: 0, total: 0 });
     setNumber(nextInvoiceNumber());
     focusCell(0, 'code');
   }
 
-  // التنقل بين الفواتير المحفوظة (بيفتح الفاتورة للعرض والطباعة)
+  // فتح فاتورة محفوظة جوه شاشة البيع نفسها — تقراها وتضيف عليها وتعدلها عادي زي البرنامج القديم
+  function loadInvoice(inv, pos, total) {
+    const its = (inv.items || []).map((it) => {
+      const p = products.find((x) => String(x.code) === String(it.code));
+      const unit = it.unit || '';
+      return {
+        code: it.code,
+        // صنف العبوة بيتخزن باسم فيه (كرتونة/دستة) — بنرجع الاسم الأصلي في الشاشة
+        name: unit === 'pack' && p ? p.name : it.name,
+        qty: it.qty,
+        price: it.price,
+        disc: it.disc || 0,
+        notes: it.notes || '',
+        unit,
+      };
+    });
+    const lineD = its.reduce((s, r) => s + (Number(r.disc) || 0), 0);
+    editLoadRef.current = true;
+    setEditingInv(inv);
+    setNavPos({ pos, total });
+    setSaved(null);
+    setRows([...its, emptyRow()]);
+    setNumber(inv.number);
+    setPayment(inv.payment || 'نقدي');
+    setCustomerName(inv.customer?.name === 'عميل نقدي' ? '' : inv.customer?.name || '');
+    setCustomerPhone(inv.customer?.phone || '');
+    setRep(inv.rep || '');
+    setExtraDisc(Math.max(0, (Number(inv.totals?.discount) || 0) - lineD));
+    setPaid(String(inv.totals?.paid ?? ''));
+    setPrevDebt(Number(inv.totals?.prevBalance) || 0);
+    setIncludeDebt((Number(inv.totals?.prevBalance) || 0) > 0);
+    showToast(`📖 فتحنا الفاتورة رقم ${inv.number} — اقراها وعدّل عليها براحتك`);
+  }
+
+  // التنقل بين الفواتير بالأسهم — الفاتورة بتتفتح هنا في الشاشة نفسها
   function gotoInvoice(dir) {
-    const all = listInvoices().sort((a, b) => (a.number || 0) - (b.number || 0));
+    const all = listInvoices().slice().sort((a, b) => (a.number || 0) - (b.number || 0));
     if (!all.length) { showToast('مفيش فواتير محفوظة بعد'); return; }
-    const target = dir === 'first' ? all[0] : all[all.length - 1];
-    router.push(`/print/${target.id}`);
+    // لو مش فاتحين فاتورة قديمة يبقى إحنا "بعد" آخر فاتورة (فاتورة جديدة)
+    const idx = editingInv ? all.findIndex((x) => x.id === editingInv.id) : all.length;
+    let t;
+    if (dir === 'first') t = 0;
+    else if (dir === 'last') t = all.length - 1;
+    else if (dir === 'prev') t = Math.max(0, idx - 1);
+    else t = idx + 1;
+    if (t >= all.length) {
+      // عدّينا آخر فاتورة = نرجع لفاتورة جديدة
+      if (editingInv) newInvoice();
+      else showToast('انت بالفعل في فاتورة جديدة');
+      return;
+    }
+    loadInvoice(all[t], t + 1, all.length);
   }
 
   if (!settings) return null;
@@ -394,25 +484,37 @@ export default function PosPage() {
         <img src="/logo.jpg" alt="" className="banner-logo" />
       </div>
 
-      {/* شريط التنقل بين الفواتير المحفوظة — زي البرنامج القديم */}
+      {/* شريط التنقل بين الفواتير — الفاتورة بتتفتح هنا في الشاشة: تقراها وتضيف عليها وتعدلها */}
       <div className="inv-nav">
         <span>📁 تصفّح الفواتير:</span>
         <button title="أول فاتورة" onClick={() => gotoInvoice('first')}>⏮</button>
-        <button title="السابقة" onClick={() => gotoInvoice('prev')}>◀ السابقة</button>
-        <button title="آخر فاتورة" onClick={() => gotoInvoice('last')}>▶ آخر فاتورة</button>
+        <button title="الفاتورة السابقة" onClick={() => gotoInvoice('prev')}>◀ السابقة</button>
+        {editingInv && navPos.total > 0 && (
+          <b style={{ minWidth: 54, textAlign: 'center' }}>{num(navPos.pos, ar)} / {num(navPos.total, ar)}</b>
+        )}
+        <button title="الفاتورة التالية" onClick={() => gotoInvoice('next')}>التالية ▶</button>
+        <button title="آخر فاتورة" onClick={() => gotoInvoice('last')}>⏭ آخر فاتورة</button>
         <button className="btn-accent" title="فاتورة جديدة" onClick={newInvoice}>➕ جديدة</button>
       </div>
+
+      {editingInv && (
+        <div className="debt-alert ok" style={{ marginBottom: 10 }}>
+          ✏️ فاتحين الفاتورة المحفوظة رقم <b>{num(number, ar)}</b> بتاريخ {fmtDate(editingInv.date, ar)} —
+          اقراها واتنقل بالأسهم، أو ضيف أصناف وعدّل عادي والحفظ هيحدّث نفس الفاتورة.
+          <button className="btn-sm" onClick={newInvoice}>➕ فاتورة جديدة</button>
+        </div>
+      )}
 
       <div className="pos-wrap">
         <div className="card" style={{ marginBottom: 0 }}>
           <div className="grid cols-4" style={{ marginBottom: 12 }}>
             <label className="field">
               <span>رقم الفاتورة</span>
-              <input value={number} onChange={(e) => setNumber(Number(e.target.value) || number)} />
+              <input value={number} readOnly={!!editingInv} onChange={(e) => setNumber(Number(e.target.value) || number)} />
             </label>
             <label className="field">
               <span>التاريخ</span>
-              <input value={fmtDate(todayISO(), ar)} readOnly />
+              <input value={fmtDate(editingInv?.date || todayISO(), ar)} readOnly />
             </label>
             <label className="field">
               <span>نوع الدفع</span>
@@ -460,7 +562,7 @@ export default function PosPage() {
             </label>
           </div>
 
-          {prevDebt > 0 && !saved && (
+          {prevDebt > 0 && !saved && !editingInv && (
             <div className={`debt-alert ${includeDebt ? 'ok' : ''}`}>
               {includeDebt ? (
                 <>
@@ -628,8 +730,13 @@ export default function PosPage() {
             {!saved ? (
               <>
                 <button className="btn-accent" style={{ justifyContent: 'center', fontSize: 16, padding: '12px' }} onClick={() => save(true)}>
-                  🖨️ طباعة الفاتورة
+                  {editingInv ? '💾 حفظ التعديلات وطباعة' : '🖨️ طباعة الفاتورة'}
                 </button>
+                {editingInv && (
+                  <button className="btn-green" style={{ justifyContent: 'center' }} onClick={() => save(false)}>
+                    💾 حفظ التعديلات بس
+                  </button>
+                )}
                 <p className="muted" style={{ textAlign: 'center', fontSize: 11, margin: 0 }}>
                   ✅ الفاتورة بتتحفظ تلقائياً — حتى لو النور قطع
                 </p>
