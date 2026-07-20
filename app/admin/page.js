@@ -15,7 +15,33 @@ import {
   cloudEnabled,
 } from '@/lib/db';
 import { SCHEMA_SQL, DRIVE_SCRIPT } from '@/lib/setupTexts';
-import { num } from '@/lib/format';
+import { num, todayISO } from '@/lib/format';
+import InvoiceDoc from '@/components/InvoiceDoc';
+
+// فاتورة تجريبية للمعاينة الحية في تخصيص الشكل
+const DEMO_INVOICE = {
+  number: 9082,
+  date: todayISO(),
+  payment: 'نقدي',
+  customer: { name: 'أحمد محمود', number: 1, address: 'شبين الكوم' },
+  items: [
+    { code: '41', name: 'طبق فاكهه حفر سيتي مربع', qty: 2, price: 255, total: 510, notes: '' },
+    { code: '11', name: 'زباله راتان وطنيه رقم 1', qty: 5, price: 94, total: 470, notes: '' },
+    { code: '3840', name: 'طشت سالي شفاف بالرسم 31 خورشيد', qty: 1, price: 38.35, total: 38.35, notes: '' },
+  ],
+  totals: { subtotal: 1018.35, discount: 0, net: 1018.35, paid: 1018.35, remaining: 0 },
+};
+
+const INV_TOGGLES = [
+  ['showLogo', 'إظهار اللوجو'],
+  ['showQr', 'إظهار QR الفاتورة'],
+  ['showTime', 'إظهار الوقت'],
+  ['showCustomerNo', 'سطر رقم العميل'],
+  ['showAddressRow', 'سطر العنوان'],
+  ['colCode', 'عمود رقم الصنف'],
+  ['colNotes', 'عمود الملاحظات'],
+  ['showPageNo', 'ترقيم الصفحات'],
+];
 
 function CopyBtn({ text, label }) {
   const [done, setDone] = useState(false);
@@ -279,6 +305,44 @@ export default function AdminPage() {
           <p style={{ fontSize: 12 }} className="muted" dir="ltr">
             {(s.publicBaseUrl || (typeof window !== 'undefined' ? window.location.origin : '')) + '/catalog' + cloudLinkHash()}
           </p>
+        </div>
+      </div>
+
+      <div className="card" style={{ borderTop: '4px solid var(--brand)' }}>
+        <h3>🧾 تخصيص شكل فاتورة البيع — والمعاينة بتتغير قدامك فوراً</h3>
+        <div className="grid" style={{ gridTemplateColumns: '320px 1fr', gap: 16, alignItems: 'start' }}>
+          <div style={{ display: 'grid', gap: 10 }}>
+            {INV_TOGGLES.map(([key, label]) => (
+              <label key={key} style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
+                <input type="checkbox" style={{ width: 'auto' }}
+                  checked={s.invoice[key] !== false}
+                  onChange={(e) => setS({ ...s, invoice: { ...s.invoice, [key]: e.target.checked } })} />
+                {label}
+              </label>
+            ))}
+            <label className="field"><span>حجم اللوجو</span>
+              <select value={s.invoice.logoSize} onChange={(e) => setS({ ...s, invoice: { ...s.invoice, logoSize: e.target.value } })}>
+                <option>صغير</option><option>وسط</option><option>كبير</option>
+              </select></label>
+            <label className="field"><span>حجم خط الجدول</span>
+              <select value={s.invoice.fontSize} onChange={(e) => setS({ ...s, invoice: { ...s.invoice, fontSize: e.target.value } })}>
+                <option>صغير</option><option>وسط</option><option>كبير</option>
+              </select></label>
+            <label className="field"><span>عدد الأصناف في الصفحة</span>
+              <input type="number" min="8" max="35" value={s.invoice.rowsPerPage}
+                onChange={(e) => setS({ ...s, invoice: { ...s.invoice, rowsPerPage: Number(e.target.value) || 22 } })} /></label>
+            <label className="field"><span>سطر أسفل الفاتورة (سياسة الاستبدال مثلاً)</span>
+              <input value={s.invoice.footerText} placeholder="البضاعة تُستبدل خلال 14 يوم بالفاتورة"
+                onChange={(e) => setS({ ...s, invoice: { ...s.invoice, footerText: e.target.value } })} /></label>
+            <label className="field"><span>عنوان المستند</span>
+              <input value={s.docTitle} onChange={(e) => setS({ ...s, docTitle: e.target.value })} /></label>
+            <p className="muted" style={{ fontSize: 12 }}>💡 متنساش تضغط "حفظ إعدادات الأدمن" تحت — وهيسري على كل الأجهزة</p>
+          </div>
+          <div className="inv-preview-wrap">
+            <div className="inv-preview">
+              <InvoiceDoc invoice={DEMO_INVOICE} settings={s} paper="a5" qrDataUrl={phoneQr || undefined} />
+            </div>
+          </div>
         </div>
       </div>
 

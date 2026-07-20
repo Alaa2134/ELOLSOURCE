@@ -650,6 +650,24 @@ table.tbl tr:hover td { background: #fef3ec; }
   padding: 5px 8px;
 }
 
+/* معاينة الفاتورة الحية في تخصيص الشكل */
+.inv-preview-wrap {
+  border: 2px dashed var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  height: 560px;
+  background: #eef1f5;
+}
+.inv-preview {
+  transform: scale(0.62);
+  transform-origin: top center;
+  pointer-events: none;
+}
+@media (max-width: 1100px) {
+  .inv-preview-wrap { height: 420px; }
+  .inv-preview { transform: scale(0.42); }
+}
+
 /* معالج الربط في لوحة الأدمن */
 .wizard-step {
   background: #f7f9fb;
