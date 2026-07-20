@@ -14,12 +14,17 @@ const HOUR_START = 9;
 const HOUR_END = 22;
 
 module.exports = function startGateway(authDir) {
-  const {
-    default: makeWASocket,
-    useMultiFileAuthState,
-    DisconnectReason,
-    fetchLatestBaileysVersion,
-  } = require('@whiskeysockets/baileys');
+  // مكتبة baileys بقت ES Module — لازم dynamic import (النسخة اللي جوه Electron مبتقبلش require ليها)
+  let makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion;
+  async function loadBaileys() {
+    if (makeWASocket) return;
+    const b = await import('@whiskeysockets/baileys');
+    const m = b.default && b.default.useMultiFileAuthState ? b.default : b;
+    makeWASocket = (typeof m.default === 'function' && m.default) || m.makeWASocket || b.default;
+    useMultiFileAuthState = m.useMultiFileAuthState;
+    DisconnectReason = m.DisconnectReason;
+    fetchLatestBaileysVersion = m.fetchLatestBaileysVersion;
+  }
 
   const logger = pino({ level: 'silent' });
   const app = express();
@@ -48,6 +53,7 @@ module.exports = function startGateway(authDir) {
   }
 
   async function startSock() {
+    await loadBaileys();
     const { state, saveCreds } = await useMultiFileAuthState(authDir);
     const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: undefined }));
     sock = makeWASocket({
@@ -137,7 +143,9 @@ module.exports = function startGateway(authDir) {
     res.json({ ok: true });
   });
 
-  const server = app.listen(PORT, '127.0.0.1', () => startSock());
+  const server = app.listen(PORT, '127.0.0.1', () => {
+    startSock().catch((e) => console.log('baileys start failed:', e.message));
+  });
   // لو برنامج تاني (محاسب/أدمن) فاتح البوابة قبلنا على نفس الجهاز — عادي، هنستخدم بتاعته
   server.on('error', () => {});
 };
