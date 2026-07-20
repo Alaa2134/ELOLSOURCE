@@ -9,6 +9,7 @@ export default function InvoicesPage() {
   const [invoices, setInvoices] = useState([]);
   const [settings, setSettings] = useState(null);
   const [q, setQ] = useState('');
+  const [showCount, setShowCount] = useState(150); // عرض تدريجي عشان البرنامج ميتقلش مع آلاف الفواتير
 
   function reload() {
     setInvoices(listInvoices());
@@ -28,6 +29,7 @@ export default function InvoicesPage() {
       fmtDate(i.date).includes(s)
     );
   });
+  const visible = filtered.slice(0, showCount);
 
   function waMsg(inv) {
     return buildMessage(settings.wa.thanksTemplate, {
@@ -61,7 +63,7 @@ export default function InvoicesPage() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((i) => (
+            {visible.map((i) => (
               <tr key={i.id}>
                 <td>
                   <b>{num(i.number, ar)}</b>
@@ -101,6 +103,13 @@ export default function InvoicesPage() {
           </tbody>
         </table>
       </div>
+      {filtered.length > showCount && (
+        <div style={{ textAlign: 'center', marginTop: 12 }}>
+          <button className="btn-primary" onClick={() => setShowCount((c) => c + 150)}>
+            ⬇️ عرض المزيد ({num(filtered.length - showCount, ar)} فاتورة كمان)
+          </button>
+        </div>
+      )}
     </div>
   );
 }

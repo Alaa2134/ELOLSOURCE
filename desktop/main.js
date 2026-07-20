@@ -43,7 +43,29 @@ function createWindow() {
   win.webContents.on('did-finish-load', () => {
     if (cfg.title) win.setTitle(cfg.title);
   });
-  win.loadURL(cfg.url || 'https://alsaka.vercel.app');
+  const url = cfg.url || 'https://alsaka.vercel.app';
+  // لو الرندر وقع (ضغط شغل/ذاكرة) — نعيد تحميل البرنامج فوراً بدل الشاشة البيضاء
+  win.webContents.on('render-process-gone', () => {
+    setTimeout(() => { try { win.loadURL(url); } catch {} }, 800);
+  });
+  win.webContents.on('unresponsive', () => {
+    setTimeout(() => { try { win.webContents.reload(); } catch {} }, 3000);
+  });
+  // لو النت كان مقطوع وقت فتح البرنامج — بنفضل نحاول لحد ما يرجع (بدل شاشة بيضاء دائمة)
+  win.webContents.on('did-fail-load', (e, code, desc, failedUrl, isMainFrame) => {
+    if (!isMainFrame) return;
+    win.loadURL(
+      'data:text/html;charset=utf-8,' +
+        encodeURIComponent(
+          '<html dir="rtl"><body style="font-family:Tahoma;text-align:center;padding-top:120px;background:#f4f6f9">' +
+            '<h2>⏳ في انتظار الاتصال بالإنترنت...</h2>' +
+            '<p style="color:#667">أول ما النت يرجع البرنامج هيفتح لوحده — بياناتك كلها محفوظة.</p>' +
+            '</body></html>'
+        )
+    );
+    setTimeout(() => { try { win.loadURL(url); } catch {} }, 7000);
+  });
+  win.loadURL(url);
 }
 
 // قائمة الطابعات المتاحة على الجهاز
