@@ -1,6 +1,16 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { listProducts, saveProduct, deleteProduct, getSettings, cleanProductName } from '@/lib/db';
+import {
+  listProducts,
+  saveProduct,
+  deleteProduct,
+  getSettings,
+  cleanProductName,
+  nameMatchKey,
+  bulkImportProducts,
+  deleteAllProducts,
+  getRole,
+} from '@/lib/db';
 import { num } from '@/lib/format';
 import { parsePdfProducts } from '@/lib/pdfImport';
 
@@ -37,6 +47,7 @@ export default function ProductsPage() {
   const [pdfRows, setPdfRows] = useState(null); // معاينة منتجات الـ PDF قبل الإضافة
   const [pdfBusy, setPdfBusy] = useState(false);
   const [showCount, setShowCount] = useState(150);
+  const [progress, setProgress] = useState(null); // { done, total, label } — عداد الاستيراد
   const pdfRef = useRef(null);
 
   function reload() {
@@ -86,39 +97,34 @@ export default function ProductsPage() {
 
   // استيراد: كل سطر "كود , اسم , سعر , تكلفة , مخزون" — يقبل الفاصلة أو Tab (لصق من إكسل)
   // الموجود (بالكود أو الاسم) بيتحدث سعره — مفيش تكرار أبداً
-  function doImport() {
-    let updated = 0;
-    let added = 0;
-    const fresh = listProducts();
+  async function doImport() {
+    const rows = [];
     for (const line of importText.split('\n')) {
       const parts = line.split(/\t|,/).map((x) => x.trim());
       if (parts.length < 3 || !parts[0] || !parts[1]) continue;
-      const existing = findExisting(fresh, parts[0], parts[1]);
-      if (existing) {
-        saveProduct({
-          ...existing,
-          price: Number(parts[2]) || existing.price,
-          cost: Number(parts[3]) || existing.cost || 0,
-          stock: parts[4] !== undefined && parts[4] !== '' ? Number(parts[4]) || 0 : existing.stock || 0,
-        });
-        updated++;
-      } else {
-        const row = saveProduct({
-          code: parts[0],
-          name: cleanProductName(parts[1]),
-          price: Number(parts[2]) || 0,
-          cost: Number(parts[3]) || 0,
-          stock: Number(parts[4]) || 0,
-          barcode: '',
-          category: 'أدوات منزلية',
-        });
-        fresh.push(row);
-        added++;
-      }
+      rows.push({ code: parts[0], name: parts[1], price: parts[2], cost: parts[3], stock: parts[4] });
     }
-    setMsg(`✅ ${added} صنف جديد — ${updated} اتحدث (من غير تكرار)`);
     setImportText('');
     setShowImport(false);
+    setProgress({ done: 0, total: rows.length, label: 'بنستورد الأصناف' });
+    const { added, updated } = await bulkImportProducts(rows, (done, total) =>
+      setProgress({ done, total, label: 'بنستورد الأصناف' })
+    );
+    setProgress(null);
+    setMsg(`✅ ${added} صنف جديد — ${updated} اتحدث (من غير تكرار)`);
+    reload();
+  }
+
+  // زر الأدمن: حذف كل الأصناف نهائياً (محلي + سحابة + كل الأجهزة)
+  async function wipeAll() {
+    if (getRole() !== 'admin') { setMsg('⛔ الزر ده للأدمن بس'); return; }
+    if (!confirm(`⚠️ حذف كل الأصناف (${products.length} صنف) نهائياً من البرنامج والسحابة وكل الأجهزة؟`)) return;
+    const pass = prompt('اكتب كلمة سر الأدمن للتأكيد:');
+    if (pass !== settings.adminPassword) { setMsg('⛔ كلمة السر غير صحيحة — مفيش حاجة اتحذفت'); return; }
+    setProgress({ done: 0, total: 1, label: 'بنحذف كل الأصناف' });
+    const n = await deleteAllProducts();
+    setProgress(null);
+    setMsg(`🗑️ تم حذف ${n} صنف — تقدر تستورد ملفك من جديد`);
     reload();
   }
 
@@ -131,59 +137,44 @@ export default function ProductsPage() {
     try {
       // بنبعت أسماء الموردين المعروفة عشان لو مكتوبة جنب اسم الصنف في الملف متتلزقش في الاسم
       const knownSuppliers = [...new Set(products.map((p) => p.category).filter(Boolean))];
-      const rows = await parsePdfProducts(f, { knownSuppliers });
+      const rows = await parsePdfProducts(f, {
+        knownSuppliers,
+        onProgress: (page, total) => setProgress({ done: page, total, label: 'بنقرا صفحات الملف' }),
+      });
+      setProgress(null);
       if (!rows.length) {
         setMsg('❌ معرفتش أطلع منتجات من الملف ده — جرب ملف فيه جدول أصناف واضح');
       } else {
         setPdfRows(rows.map((r) => ({ ...r, checked: true })));
       }
     } catch (err) {
+      setProgress(null);
       setMsg('❌ فشل قراءة الـ PDF: ' + err.message);
     }
     setPdfBusy(false);
   }
 
-  // البحث عن صنف موجود: بالكود الأول، ولو مفيش كود بنطابق بالاسم (بعد توحيد المسافات والرموز)
+  // البحث عن صنف موجود: بالكود الأول، ولو مفيش كود بنطابق بالاسم (متجاهلين فروق المسافات)
   function findExisting(list, code, name) {
     const c = String(code || '').trim();
     if (c) {
       const byCode = list.find((p) => String(p.code).trim() === c);
       if (byCode) return byCode;
     }
-    const n = cleanProductName(name).trim();
+    const n = nameMatchKey(name);
     if (!n) return null;
-    return list.find((p) => cleanProductName(p.name).trim() === n) || null;
+    return list.find((p) => nameMatchKey(p.name) === n) || null;
   }
 
   // الاستيراد مش بيكرر أبداً: الموجود بيتحدث سعره — الجديد بس هو اللي بيتضاف
-  function importPdfRows() {
-    let updated = 0;
-    let added = 0;
-    let fresh = listProducts(); // أحدث نسخة (مش الحالة القديمة)
-    let nextCode = fresh.reduce((m, p) => Math.max(m, Number(p.code) || 0), 0) + 1;
-    for (const r of pdfRows) {
-      if (!r.checked || !r.name) continue;
-      const existing = findExisting(fresh, r.code, r.name);
-      if (existing) {
-        // موجود قبل كده → تحديث السعر بس (الاسم والمخزون والتكلفة زي ما هما)
-        saveProduct({ ...existing, price: Number(r.price) || existing.price });
-        updated++;
-      } else {
-        const code = String(r.code || '').trim() || String(nextCode++);
-        const row = saveProduct({
-          code,
-          name: cleanProductName(r.name),
-          price: Number(r.price) || 0,
-          cost: 0,
-          stock: 0,
-          barcode: '',
-          category: r.supplier || 'أدوات منزلية',
-        });
-        fresh.push(row);
-        added++;
-      }
-    }
+  async function importPdfRows() {
+    const rows = pdfRows.filter((r) => r.checked && r.name);
     setPdfRows(null);
+    setProgress({ done: 0, total: rows.length, label: 'بنستورد الأصناف' });
+    const { added, updated } = await bulkImportProducts(rows, (done, total) =>
+      setProgress({ done, total, label: 'بنستورد الأصناف' })
+    );
+    setProgress(null);
     setMsg(`✅ خلصنا: ${added} صنف جديد اتضاف — ${updated} صنف موجود اتحدث سعره (من غير أي تكرار)`);
     reload();
   }
@@ -256,8 +247,21 @@ export default function ProductsPage() {
             <input ref={pdfRef} type="file" accept=".pdf" hidden onChange={onPdfFile} />
             <button onClick={() => setShowImport(!showImport)}>📥 استيراد من إكسل</button>
             <button onClick={exportCsv}>📤 تصدير CSV</button>
+            <button className="btn-red" title="حذف كل الأصناف نهائياً (للأدمن)" onClick={wipeAll}>🗑️ حذف كل المنتجات</button>
           </div>
         </div>
+
+        {progress && (
+          <div style={{ marginBottom: 12, background: '#fff8f2', border: '1px solid var(--accent)', padding: 14, borderRadius: 8 }}>
+            <b>⏳ {progress.label}: تم {num(progress.done, settings.arabicDigits)} من أصل {num(progress.total, settings.arabicDigits)}</b>
+            <div style={{ background: '#eee', borderRadius: 6, height: 14, marginTop: 8, overflow: 'hidden' }}>
+              <div style={{
+                background: 'var(--accent)', height: '100%', transition: 'width .2s',
+                width: `${progress.total ? Math.round((progress.done / progress.total) * 100) : 0}%`,
+              }} />
+            </div>
+          </div>
+        )}
 
         {pdfRows && (
           <div style={{ marginBottom: 12, background: '#fff8f2', border: '1px solid var(--accent)', padding: 12, borderRadius: 8 }}>
