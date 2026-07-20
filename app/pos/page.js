@@ -8,6 +8,7 @@ import {
   saveCustomer,
   saveInvoice,
   nextInvoiceNumber,
+  listInvoices,
   getSettings,
   customerDebt,
   settleCustomerDebt,
@@ -56,7 +57,9 @@ export default function PosPage() {
   const [saved, setSaved] = useState(null);
   const [toast, setToast] = useState('');
   const [scanning, setScanning] = useState(false); // كاميرا الباركود
+  const [isMobile, setIsMobile] = useState(false); // موبايل؟ (عشان الكاميرا)
   const tableRef = useRef(null);
+  const scanBuf = useRef({ txt: '', t: 0 }); // بافر سكانر الباركود USB/بلوتوث
 
   const DRAFT_KEY = 'saqqa_pos_draft';
 
@@ -66,6 +69,10 @@ export default function PosPage() {
     setProducts(listProducts());
     setCustomers(listCustomers());
     setReps(listReps());
+    // كشف الموبايل (فيه كاميرا خلفية ولمس) عشان زرار الكاميرا
+    const touch = (navigator.maxTouchPoints || 0) > 0;
+    const mob = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+    setIsMobile(touch && mob);
     // استرجاع الفاتورة اللي كانت مفتوحة (لو النور قطع أو البرنامج اتقفل فجأة)
     let restored = false;
     try {
@@ -96,6 +103,32 @@ export default function PosPage() {
       );
     } catch {}
   }, [rows, number, payment, customerName, customerPhone, extraDisc, paid, rep, saved, settings]);
+
+  // سكانر الباركود USB/بلوتوث: بيكتب بسرعة عالية وينهي بـ Enter — بنلتقطه من أي مكان في الشاشة
+  useEffect(() => {
+    function onKeyGlobal(e) {
+      const now = Date.now();
+      const buf = scanBuf.current;
+      // لو التوقيت بين الحروف بطيء (كتابة يدوية) نصفّر البافر
+      if (now - buf.t > 120) buf.txt = '';
+      buf.t = now;
+      if (e.key === 'Enter') {
+        const code = buf.txt.trim();
+        buf.txt = '';
+        // سكانر حقيقي = 4 حروف أو أكتر اتكتبوا بسرعة؛ ولو الكتابة كانت في خانة نسيبها للخانة
+        if (code.length >= 4 && findProduct(code)) {
+          const active = document.activeElement;
+          const inGrid = active && active.closest && active.closest('.pos-grid');
+          if (!inGrid) { e.preventDefault(); addByScan(code); }
+        }
+        return;
+      }
+      if (e.key.length === 1) buf.txt += e.key;
+    }
+    window.addEventListener('keydown', onKeyGlobal);
+    return () => window.removeEventListener('keydown', onKeyGlobal);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products, customerName]);
 
   // تنبيه المديونية عند اختيار العميل
   useEffect(() => {
@@ -151,8 +184,8 @@ export default function PosPage() {
     }
   }
 
-  // مسح بالكاميرا: الصنف بيتضاف — ولو اتمسح تاني الكمية بتزيد
-  function onCameraScan(code) {
+  // إضافة صنف بالمسح (كاميرا أو سكانر باركود): الصنف بيتضاف — ولو اتمسح تاني الكمية بتزيد
+  function addByScan(code) {
     const p = products.find(
       (x) => String(x.barcode || '') === code || String(x.code) === code
     );
@@ -342,6 +375,14 @@ export default function PosPage() {
     focusCell(0, 'code');
   }
 
+  // التنقل بين الفواتير المحفوظة (بيفتح الفاتورة للعرض والطباعة)
+  function gotoInvoice(dir) {
+    const all = listInvoices().sort((a, b) => (a.number || 0) - (b.number || 0));
+    if (!all.length) { showToast('مفيش فواتير محفوظة بعد'); return; }
+    const target = dir === 'first' ? all[0] : all[all.length - 1];
+    router.push(`/print/${target.id}`);
+  }
+
   if (!settings) return null;
   const ar = settings.arabicDigits;
 
@@ -351,6 +392,15 @@ export default function PosPage() {
         <img src="/logo.jpg" alt="" className="banner-logo" />
         <h2>فـاتـورة بـيـع</h2>
         <img src="/logo.jpg" alt="" className="banner-logo" />
+      </div>
+
+      {/* شريط التنقل بين الفواتير المحفوظة — زي البرنامج القديم */}
+      <div className="inv-nav">
+        <span>📁 تصفّح الفواتير:</span>
+        <button title="أول فاتورة" onClick={() => gotoInvoice('first')}>⏮</button>
+        <button title="السابقة" onClick={() => gotoInvoice('prev')}>◀ السابقة</button>
+        <button title="آخر فاتورة" onClick={() => gotoInvoice('last')}>▶ آخر فاتورة</button>
+        <button className="btn-accent" title="فاتورة جديدة" onClick={newInvoice}>➕ جديدة</button>
       </div>
 
       <div className="pos-wrap">
@@ -525,11 +575,17 @@ export default function PosPage() {
             </table>
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>
-            <button className="btn-primary" onClick={() => setScanning(true)}>
-              📷 مسح بالكاميرا
+            <button
+              className="btn-primary"
+              onClick={() => {
+                if (isMobile) setScanning(true);
+                else showToast('📷 الكاميرا دي للموبايل — على الكمبيوتر استخدم سكانر الباركود (USB أو بلوتوث): امسك الصنف والسكانر هيضيفه لوحده');
+              }}
+            >
+              📷 مسح بالكاميرا {!isMobile && '(للموبايل)'}
             </button>
             <p className="muted" style={{ fontSize: 12, margin: 0 }}>
-              💡 اكتب الكود أو الاسم وهتظهر الاقتراحات — Enter بينقلك بين الخانات — أو امسح الباركود بكاميرا الموبايل.
+              💡 اكتب الكود أو الاسم وهتظهر الاقتراحات — Enter بينقلك بين الخانات — أو <b>امسح الباركود بسكانر الجهاز</b> (USB/بلوتوث) والصنف هيتضاف لوحده.
             </p>
           </div>
         </div>
@@ -611,7 +667,7 @@ export default function PosPage() {
         </div>
       </div>
 
-      {scanning && <BarcodeScanner onScan={onCameraScan} onClose={() => setScanning(false)} />}
+      {scanning && <BarcodeScanner onScan={addByScan} onClose={() => setScanning(false)} />}
       {toast && <div className="toast">{toast}</div>}
     </div>
   );

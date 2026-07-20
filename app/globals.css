@@ -297,6 +297,21 @@ table.tbl tr:hover td { background: #fef3ec; }
 }
 .pinbox input { text-align: center; font-size: 26px; letter-spacing: 8px; }
 
+/* شريط التنقل بين الفواتير */
+.inv-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.inv-nav > span { font-weight: 700; color: var(--brand); font-size: 14px; }
+.inv-nav button { padding: 6px 14px; font-size: 13px; }
+
 /* قائمة الاقتراح المنسدلة */
 .picker { position: relative; }
 .picker-arrow {

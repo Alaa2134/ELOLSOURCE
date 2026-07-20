@@ -16,7 +16,7 @@ export default function PrintPage() {
   const [settings, setSettings] = useState(null);
   const [qr, setQr] = useState('');
   const [paper, setPaper] = useState('a4');
-  const [nav, setNav] = useState({ prev: null, next: null });
+  const [nav, setNav] = useState({ first: null, prev: null, next: null, last: null, pos: 0, total: 0 });
 
   useEffect(() => {
     const inv = getInvoice(id);
@@ -27,8 +27,12 @@ export default function PrintPage() {
     const all = listInvoices().sort((a, b) => (a.number || 0) - (b.number || 0));
     const idx = all.findIndex((x) => x.id === id);
     setNav({
+      first: all.length && idx !== 0 ? all[0] : null,
       prev: idx > 0 ? all[idx - 1] : null,
       next: idx >= 0 && idx < all.length - 1 ? all[idx + 1] : null,
+      last: all.length && idx !== all.length - 1 ? all[all.length - 1] : null,
+      pos: idx + 1,
+      total: all.length,
     });
     if (inv) {
       // فاتورة قصيرة → نص ورقة تلقائياً
@@ -80,18 +84,15 @@ export default function PrintPage() {
     <div style={{ background: '#888', minHeight: '100vh', padding: '14px 0' }}>
       {/* الطباعة دايماً على A4 عادي (مضمونة مع كل الطابعات) — القصيرة بتطلع في النص العلوي مع خط قص */}
       <div className="print-actions no-print">
-        <button className="btn-primary" disabled={!nav.prev}
-          title={nav.prev ? `فاتورة ${nav.prev.number}` : ''}
-          onClick={() => nav.prev && router.push(`/print/${nav.prev.id}`)}>
-          ▶ السابقة
-        </button>
+        <div className="inv-nav" style={{ margin: 0 }}>
+          <button disabled={!nav.first} title="آخر فاتورة" onClick={() => nav.first && router.push(`/print/${nav.first.id}`)}>⏮</button>
+          <button className="btn-primary" disabled={!nav.prev} onClick={() => nav.prev && router.push(`/print/${nav.prev.id}`)}>◀ السابقة</button>
+          <b style={{ minWidth: 60, textAlign: 'center' }}>{nav.pos || 0} / {nav.total || 0}</b>
+          <button className="btn-primary" disabled={!nav.next} onClick={() => nav.next && router.push(`/print/${nav.next.id}`)}>التالية ▶</button>
+          <button disabled={!nav.last} title="أول فاتورة" onClick={() => nav.last && router.push(`/print/${nav.last.id}`)}>⏭</button>
+        </div>
         <button className="btn-accent" onClick={doPrint}>
           🖨️ طباعة{settings.printerName ? ` — ${settings.printerName}` : ''}
-        </button>
-        <button className="btn-primary" disabled={!nav.next}
-          title={nav.next ? `فاتورة ${nav.next.number}` : ''}
-          onClick={() => nav.next && router.push(`/print/${nav.next.id}`)}>
-          التالية ◀
         </button>
         <button onClick={() => setPaper(paper === 'a5' ? 'a4' : 'a5')}>
           📄 {paper === 'a5' ? 'الوضع: نص ورقة (اقطع عند خط ✂)' : 'الوضع: ورقة كاملة'}

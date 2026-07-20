@@ -73,6 +73,7 @@ export default function Shell({ children }) {
     pathname === '/inquiry' ||
     pathname === '/catalog';
 
+  // فحص الصلاحيات فقط — خفيف، بيتنفذ مع كل تنقل
   useEffect(() => {
     setCloud(cloudEnabled());
     if (!bare) {
@@ -89,35 +90,46 @@ export default function Shell({ children }) {
         return;
       }
     }
-    // تحميل قائمة الأصناف الكاملة أول مرة قبل عرض الشاشات
+    setReady(true);
+  }, [pathname, bare, router]);
+
+  // التهيئة الثقيلة (تحميل الأصناف + المزامنة) مرة واحدة بس عند فتح البرنامج — مش مع كل تنقل
+  useEffect(() => {
+    if (bare) return;
     (async () => {
       await seedIfEmpty();
-      setReady(true);
+      syncPull();
+      ensureFullPush();
     })();
-    syncPull();
-    ensureFullPush(); // لو السحابة متفعلة والبيانات القديمة لسه مترفعتش — نرفعها
     runDailyBackup();
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
     const t = setInterval(() => {
       flushPending();
-      syncPull(); // مزامنة دورية احتياطية
-      maybeSendDailyReport(); // تقرير آخر اليوم للأدمن في معاده
-      maybeSendDebtReminders(); // تذكير المديونيات الأسبوعي
-    }, 60000);
+      syncPull(); // مزامنة دورية احتياطية (الأساسي هو Realtime)
+      maybeSendDailyReport();
+      maybeSendDebtReminders();
+    }, 90000);
     return () => clearInterval(t);
-  }, [pathname, bare, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // مزامنة لحظية Realtime من Supabase — أي تعديل من جهاز تاني بيوصل فوراً
+  // بتأخير بسيط (debounce) عشان لو جالنا كذا تعديل ورا بعض منعملش سحب متكرر يتقّل الجهاز
   useEffect(() => {
     const sb = getSupabase();
     if (!sb || bare) return;
+    let timer = null;
     const ch = sb
       .channel('saqqa-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public' }, () => syncPull())
+      .on('postgres_changes', { event: '*', schema: 'public' }, () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => syncPull(), 4000);
+      })
       .subscribe();
     return () => {
+      clearTimeout(timer);
       sb.removeChannel(ch);
     };
   }, [bare]);
