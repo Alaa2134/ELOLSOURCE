@@ -13,6 +13,7 @@ import {
   syncPull,
   pushAllToCloud,
   cloudEnabled,
+  cleanupDuplicateProducts,
 } from '@/lib/db';
 import { SCHEMA_SQL, DRIVE_SCRIPT } from '@/lib/setupTexts';
 import { num, todayISO } from '@/lib/format';
@@ -472,6 +473,12 @@ export default function AdminPage() {
           <Link href="/settings" className="btn btn-primary">🏢 بيانات الشركة والنسخ الاحتياطي</Link>
           <Link href="/whatsapp" className="btn btn-green">💬 إعدادات الواتساب</Link>
           <Link href="/reports" className="btn">📈 التقارير الكاملة</Link>
+          <button className="btn" onClick={async () => {
+            if (!confirm('تنظيف الأصناف المكررة (اللي بنفس الكود اترفعت من أكتر من جهاز)؟')) return;
+            setMsg('⏳ جاري التنظيف...');
+            const n = await cleanupDuplicateProducts();
+            setMsg(n ? `✅ تم حذف ${n} صنف مكرر` : '✅ مفيش أصناف مكررة');
+          }}>🧹 تنظيف الأصناف المكررة</button>
         </div>
       </div>
 
