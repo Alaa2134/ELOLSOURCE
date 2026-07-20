@@ -27,8 +27,12 @@ export default function PublicInvoicePage() {
   if (!invoice || !settings)
     return (
       <div style={{ padding: 40, textAlign: 'center' }}>
-        <h2>عذراً، الفاتورة غير موجودة</h2>
-        <p className="muted">تأكد من صحة الرابط أو تواصل مع السقا للأدوات المنزلية</p>
+        <img src="/logo.jpg" alt="" style={{ width: 90, height: 90, objectFit: 'contain', marginBottom: 12 }} />
+        <h2>الفاتورة مش متاحة أونلاين حالياً</h2>
+        <p className="muted" style={{ marginTop: 8, lineHeight: 2 }}>
+          الفاتورة محفوظة عند السقا للأدوات المنزلية —<br />
+          ممكن تطلب نسخة محدثة على الواتساب، أو تجرب الرابط تاني بعد شوية.
+        </p>
       </div>
     );
 
