@@ -8,7 +8,7 @@ import {
   cleanProductName,
   nameMatchKey,
   bulkImportProducts,
-  deleteAllProducts,
+  deleteProductsBulk,
   getRole,
 } from '@/lib/db';
 import { num } from '@/lib/format';
@@ -48,6 +48,7 @@ export default function ProductsPage() {
   const [pdfBusy, setPdfBusy] = useState(false);
   const [showCount, setShowCount] = useState(150);
   const [progress, setProgress] = useState(null); // { done, total, label } — عداد الاستيراد
+  const [selected, setSelected] = useState(() => new Set()); // الأصناف المحددة للمسح
   const pdfRef = useRef(null);
 
   function reload() {
@@ -120,16 +121,36 @@ export default function ProductsPage() {
     reload();
   }
 
-  // زر الأدمن: حذف كل الأصناف نهائياً (محلي + سحابة + كل الأجهزة)
-  async function wipeAll() {
-    if (getRole() !== 'admin') { setMsg('⛔ الزر ده للأدمن بس'); return; }
-    if (!confirm(`⚠️ حذف كل الأصناف (${products.length} صنف) نهائياً من البرنامج والسحابة وكل الأجهزة؟`)) return;
+  // تحديد/إلغاء تحديد صنف
+  function toggleSelect(id) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  // تحديد الكل (كل نتايج البحث الحالية — مش المعروض بس) أو إلغاء التحديد
+  function toggleSelectAll(list) {
+    setSelected((prev) => {
+      if (prev.size === list.length && list.length) return new Set();
+      return new Set(list.map((p) => p.id));
+    });
+  }
+
+  // مسح المحدد (للأدمن بكلمة سر) — ولو المحدد كل الأصناف بيتعامل كحذف الكل من كل الأجهزة
+  async function deleteSelected() {
+    if (!selected.size) { setMsg('⚠️ حدد أصناف الأول (علّم على المربعات في الجدول)'); return; }
+    if (getRole() !== 'admin') { setMsg('⛔ المسح للأدمن بس'); return; }
+    if (!confirm(`⚠️ مسح ${selected.size} صنف محدد نهائياً من البرنامج والسحابة؟`)) return;
     const pass = prompt('اكتب كلمة سر الأدمن للتأكيد:');
-    if (pass !== settings.adminPassword) { setMsg('⛔ كلمة السر غير صحيحة — مفيش حاجة اتحذفت'); return; }
-    setProgress({ done: 0, total: 1, label: 'بنحذف كل الأصناف' });
-    const n = await deleteAllProducts();
+    if (pass !== settings.adminPassword) { setMsg('⛔ كلمة السر غير صحيحة — مفيش حاجة اتمسحت'); return; }
+    setProgress({ done: 0, total: 1, label: 'بنمسح الأصناف المحددة' });
+    const n = await deleteProductsBulk([...selected]);
     setProgress(null);
-    setMsg(`🗑️ تم حذف ${n} صنف — تقدر تستورد ملفك من جديد`);
+    setSelected(new Set());
+    setMsg(`🗑️ تم مسح ${n} صنف`);
     reload();
   }
 
@@ -257,7 +278,12 @@ export default function ProductsPage() {
             <input ref={pdfRef} type="file" accept=".pdf" hidden onChange={onPdfFile} />
             <button onClick={() => setShowImport(!showImport)}>📥 استيراد من إكسل</button>
             <button onClick={exportCsv}>📤 تصدير CSV</button>
-            <button className="btn-red" title="حذف كل الأصناف نهائياً (للأدمن)" onClick={wipeAll}>🗑️ حذف كل المنتجات</button>
+            <button title="تحديد كل نتايج البحث الحالية" onClick={() => toggleSelectAll(allFiltered)}>
+              {selected.size === allFiltered.length && allFiltered.length ? '⬜ إلغاء التحديد' : '☑️ تحديد الكل'}
+            </button>
+            <button className="btn-red" title="مسح الأصناف المعلَّم عليها (للأدمن)" onClick={deleteSelected}>
+              🗑️ مسح المحدد{selected.size ? ` (${num(selected.size, settings?.arabicDigits)})` : ''}
+            </button>
           </div>
         </div>
 
@@ -332,11 +358,29 @@ export default function ProductsPage() {
         <div style={{ overflowX: 'auto' }}>
           <table className="tbl">
             <thead>
-              <tr><th></th><th>الكود</th><th>اسم الصنف</th><th>المورد</th><th>سعر البيع</th><th>جملة</th><th>السعر المبدئي</th><th>المخزون</th><th>إجراءات</th></tr>
+              <tr>
+                <th title="تحديد الكل">
+                  <input
+                    type="checkbox"
+                    style={{ width: 'auto', cursor: 'pointer' }}
+                    checked={allFiltered.length > 0 && selected.size === allFiltered.length}
+                    onChange={() => toggleSelectAll(allFiltered)}
+                  />
+                </th>
+                <th></th><th>الكود</th><th>اسم الصنف</th><th>المورد</th><th>سعر البيع</th><th>جملة</th><th>السعر المبدئي</th><th>المخزون</th><th>إجراءات</th>
+              </tr>
             </thead>
             <tbody>
               {filtered.map((p) => (
-                <tr key={p.id}>
+                <tr key={p.id} style={selected.has(p.id) ? { background: '#fff3ec' } : undefined}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      style={{ width: 'auto', cursor: 'pointer' }}
+                      checked={selected.has(p.id)}
+                      onChange={() => toggleSelect(p.id)}
+                    />
+                  </td>
                   <td>{p.image ? <img src={p.image} alt="" className="thumb" /> : <span className="muted">—</span>}</td>
                   <td><b>{p.code}</b></td>
                   <td>{p.name}{p.packQty > 0 ? <small className="muted"> ({p.packName || 'عبوة'} {p.packQty})</small> : ''}</td>
