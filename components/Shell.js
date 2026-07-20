@@ -29,6 +29,7 @@ const NAV = [
   { href: '/invoices', label: '📁 الفواتير', title: 'الفواتير', roles: ['admin', 'cashier', 'accountant'] },
   { href: '/returns', label: '↩️ مرتجع بيع', title: 'مرتجع بيع', roles: ['admin', 'cashier'] },
   { href: '/purchases', label: '📥 المشتريات والموردين', title: 'المشتريات والموردين', roles: ['admin', 'accountant'] },
+  { href: '/order', label: '📋 طلب بضاعة من مورد', title: 'طلب بضاعة من مورد', roles: ['admin', 'accountant'] },
   { href: '/statement', label: '📄 كشف حساب', title: 'كشف حساب عميل', roles: ['admin', 'cashier', 'accountant'] },
   { href: '/products', label: '📦 الأصناف والمخزون', title: 'الأصناف والمخزون', roles: ['admin', 'cashier'] },
   { href: '/customers', label: '👥 العملاء', title: 'العملاء', roles: ['admin', 'cashier'] },
@@ -69,6 +70,7 @@ export default function Shell({ children }) {
   const bare =
     pathname.startsWith('/inv/') ||
     pathname.startsWith('/print/') ||
+    pathname.startsWith('/order/print/') ||
     pathname === '/login' ||
     pathname === '/inquiry' ||
     pathname === '/catalog';
