@@ -10,8 +10,10 @@ import {
   bulkImportProducts,
   deleteProductsBulk,
   getRole,
+  listInvoices,
+  listPurchases,
 } from '@/lib/db';
-import { num } from '@/lib/format';
+import { num, fmtDate } from '@/lib/format';
 import { parsePdfProducts } from '@/lib/pdfImport';
 import { confirmBox, dangerBox, promptBox } from '@/lib/ui';
 
@@ -41,7 +43,10 @@ export default function ProductsPage() {
   const [products, setProducts] = useState([]);
   const [settings, setSettings] = useState(null);
   const [form, setForm] = useState(empty);
-  const [q, setQ] = useState('');
+  const [q, setQ] = useState(() => {
+    if (typeof window === 'undefined') return '';
+    return new URLSearchParams(window.location.search).get('q') || ''; // بحث سريع بيجيب هنا بالكود
+  });
   const [showImport, setShowImport] = useState(false);
   const [importText, setImportText] = useState('');
   const [msg, setMsg] = useState('');
@@ -50,7 +55,34 @@ export default function ProductsPage() {
   const [showCount, setShowCount] = useState(150);
   const [progress, setProgress] = useState(null); // { done, total, label } — عداد الاستيراد
   const [selected, setSelected] = useState(() => new Set()); // الأصناف المحددة للمسح
+  const [histProduct, setHistProduct] = useState(null); // حركة الصنف المفتوحة
   const pdfRef = useRef(null);
+
+  // حركة الصنف: كل بيع وشراء للصنف ده بالتاريخ (اشتريته بكام واتباع بكام وامتى)
+  function movementsOf(code) {
+    const out = [];
+    for (const inv of listInvoices()) {
+      for (const it of inv.items || []) {
+        if (String(it.code) !== String(code)) continue;
+        out.push({
+          date: inv.date, kind: inv.type === 'مرتجع' ? 'مرتجع' : 'بيع',
+          qty: Number(it.qty) || 0, price: Number(it.price) || 0,
+          ref: `فاتورة ${inv.number}`, who: inv.customer?.name || inv.cashier || '',
+        });
+      }
+    }
+    for (const pur of listPurchases()) {
+      for (const it of pur.items || []) {
+        if (String(it.code) !== String(code)) continue;
+        out.push({
+          date: pur.date, kind: 'شراء',
+          qty: Number(it.qty) || 0, price: Number(it.cost) || 0,
+          ref: `شراء ${pur.number}`, who: pur.supplier?.name || '',
+        });
+      }
+    }
+    return out.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  }
 
   function reload() {
     setProducts(listProducts());
@@ -402,6 +434,7 @@ export default function ProductsPage() {
                     </span>
                   </td>
                   <td style={{ display: 'flex', gap: 6 }}>
+                    <button className="btn-sm" title="حركة الصنف (بيع وشراء)" onClick={() => setHistProduct(p)}>📊</button>
                     <button className="btn-sm btn-primary" onClick={() => setForm({ ...empty, ...p })}>✏️</button>
                     <button
                       className="btn-sm btn-red"
@@ -419,6 +452,47 @@ export default function ProductsPage() {
           </button>
         )}
       </div>
+
+      {histProduct && (() => {
+        const mv = movementsOf(histProduct.code);
+        const sold = mv.filter((m) => m.kind === 'بيع').reduce((s, m) => s + m.qty, 0);
+        const bought = mv.filter((m) => m.kind === 'شراء').reduce((s, m) => s + m.qty, 0);
+        return (
+          <div className="dlg-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setHistProduct(null); }}>
+            <div className="dlg-box" style={{ maxWidth: 620, textAlign: 'right' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <h3 style={{ color: 'var(--brand)', margin: 0 }}>📊 حركة الصنف: {histProduct.name}</h3>
+                <button className="btn-sm" onClick={() => setHistProduct(null)}>✕</button>
+              </div>
+              <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
+                <span className="badge blue">كود {histProduct.code}</span>
+                <span className="badge green">اتباع: {num(sold, ar)}</span>
+                <span className="badge orange">اتشرى: {num(bought, ar)}</span>
+                <span className="badge red">المخزون: {num(histProduct.stock || 0, ar)}</span>
+              </div>
+              <div style={{ maxHeight: 360, overflowY: 'auto' }}>
+                <table className="tbl">
+                  <thead><tr><th>التاريخ</th><th>الحركة</th><th>الكمية</th><th>السعر</th><th>الطرف</th></tr></thead>
+                  <tbody>
+                    {mv.map((m, i) => (
+                      <tr key={i}>
+                        <td>{fmtDate(m.date, ar)}</td>
+                        <td>
+                          <span className={`badge ${m.kind === 'شراء' ? 'orange' : m.kind === 'مرتجع' ? 'red' : 'green'}`}>{m.kind}</span>
+                        </td>
+                        <td><b>{num(m.qty, ar)}</b></td>
+                        <td>{num(m.price, ar)}</td>
+                        <td>{m.who || '—'}</td>
+                      </tr>
+                    ))}
+                    {!mv.length && <tr><td colSpan={5} className="muted">مفيش حركة على الصنف ده لسه</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
