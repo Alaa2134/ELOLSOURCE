@@ -56,7 +56,58 @@ export default function ProductsPage() {
   const [progress, setProgress] = useState(null); // { done, total, label } — عداد الاستيراد
   const [selected, setSelected] = useState(() => new Set()); // الأصناف المحددة للمسح
   const [histProduct, setHistProduct] = useState(null); // حركة الصنف المفتوحة
+  const [editCell, setEditCell] = useState(null); // { id, field } — تعديل سريع بالضغط المزدوج
+  const [editVal, setEditVal] = useState('');
   const pdfRef = useRef(null);
+
+  // تعديل سريع: ضغطتين على خانة السعر بتفتحها للتعديل على طول
+  function startEdit(p, field) {
+    setEditCell({ id: p.id, field });
+    setEditVal(String(p[field] ?? ''));
+  }
+  function commitEdit(p) {
+    if (!editCell) return;
+    const v = Number(editVal);
+    if (!Number.isNaN(v) && v !== Number(p[editCell.field] || 0)) {
+      saveProduct({ ...p, [editCell.field]: v });
+      reload();
+    }
+    setEditCell(null);
+  }
+  // خانة سعر قابلة للتعديل بالضغط المزدوج
+  function PriceCell({ p, field, className }) {
+    const editing = editCell && editCell.id === p.id && editCell.field === field;
+    if (editing) {
+      return (
+        <td>
+          <input
+            className="num" type="number" step="any" autoFocus
+            style={{ width: 80 }}
+            value={editVal}
+            onChange={(e) => setEditVal(e.target.value)}
+            onBlur={() => commitEdit(p)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') { e.preventDefault(); commitEdit(p); }
+              if (e.key === 'Escape') setEditCell(null);
+            }}
+          />
+        </td>
+      );
+    }
+    return (
+      <td
+        className={className}
+        title="دوس مرتين للتعديل"
+        style={{ cursor: 'pointer' }}
+        onDoubleClick={() => startEdit(p, field)}
+      >
+        {field === 'priceWholesale' && !(Number(p[field]) > 0)
+          ? <span className="muted">—</span>
+          : num(p[field] || 0, ar)}
+        <span className="edit-hint">✎</span>
+      </td>
+    );
+  }
 
   // حركة الصنف: كل بيع وشراء للصنف ده بالتاريخ (اشتريته بكام واتباع بكام وامتى)
   function movementsOf(code) {
@@ -425,9 +476,9 @@ export default function ProductsPage() {
                   <td><b>{p.code}</b></td>
                   <td>{p.name}{p.packQty > 0 ? <small className="muted"> ({p.packName || 'عبوة'} {p.packQty})</small> : ''}</td>
                   <td>{p.category && p.category !== 'أدوات منزلية' ? <span className="badge blue">{p.category}</span> : <span className="muted">—</span>}</td>
-                  <td className="muted">{num(p.cost || 0, ar)}</td>
-                  <td>{(p.priceWholesale || 0) > 0 ? num(p.priceWholesale, ar) : <span className="muted">—</span>}</td>
-                  <td>{num(p.price, ar)}</td>
+                  <PriceCell p={p} field="cost" className="muted" />
+                  <PriceCell p={p} field="priceWholesale" />
+                  <PriceCell p={p} field="price" />
                   <td>
                     <span className={`badge ${(Number(p.stock) || 0) <= (settings.lowStock || 5) ? 'red' : 'green'}`}>
                       {num(p.stock || 0, ar)}

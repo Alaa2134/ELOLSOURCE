@@ -822,3 +822,7 @@ table.tbl tr:hover td { background: #fef3ec; }
 .gs-main b { font-size: 14px; }
 .gs-main small { color: var(--muted); font-size: 12px; }
 .gs-type { font-size: 11px; color: var(--muted); background: #eef1f5; padding: 2px 8px; border-radius: 10px; }
+
+/* تلميح التعديل السريع على السعر */
+.tbl td .edit-hint { color: var(--muted); font-size: 11px; margin-right: 4px; opacity: 0; transition: opacity .15s; }
+.tbl td:hover .edit-hint { opacity: .7; }
