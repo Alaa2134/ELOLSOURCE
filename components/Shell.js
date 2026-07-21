@@ -117,6 +117,36 @@ export default function Shell({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // تحديث تلقائي: كل ما ننزل نسخة جديدة البرنامج بياخدها لوحده من غير ريفريش يدوي
+  // (بيتأجل لو المستخدم في نص فاتورة عشان شغله ميتقطعش)
+  useEffect(() => {
+    if (bare) return;
+    let current = '';
+    let pendingReload = false;
+    const getV = () => fetch('/version.txt', { cache: 'no-store' }).then((r) => (r.ok ? r.text() : '')).catch(() => '');
+    getV().then((v) => { current = v; });
+    const safeToReload = () => {
+      try {
+        const d = JSON.parse(localStorage.getItem('saqqa_pos_draft') || 'null');
+        const busy = d && d.rows && d.rows.some((r) => r.code || r.name);
+        return !busy || pathname !== '/pos';
+      } catch { return true; }
+    };
+    const t = setInterval(async () => {
+      const v = await getV();
+      if (v && current && v !== current) {
+        if (safeToReload()) window.location.reload();
+        else pendingReload = true;
+      }
+    }, 10 * 60 * 1000);
+    const onVis = () => {
+      if (pendingReload && document.visibilityState === 'visible' && safeToReload()) window.location.reload();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', onVis); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bare]);
+
   // مزامنة لحظية Realtime من Supabase — أي تعديل من جهاز تاني بيوصل فوراً
   // بتأخير بسيط (debounce) عشان لو جالنا كذا تعديل ورا بعض منعملش سحب متكرر يتقّل الجهاز
   useEffect(() => {

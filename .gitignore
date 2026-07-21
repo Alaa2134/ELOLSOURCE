@@ -13,3 +13,4 @@ public/pdf.worker.min.mjs
 lib/setupTexts.js
 desktop/node_modules/
 desktop/dist/
+public/version.txt
