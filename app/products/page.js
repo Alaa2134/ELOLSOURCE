@@ -224,10 +224,10 @@ export default function ProductsPage() {
             <input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} /></label>
           <label className="field" style={{ gridColumn: 'span 2' }}><span>اسم الصنف</span>
             <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
-          <label className="field"><span>سعر البيع</span>
-            <input type="number" step="any" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} /></label>
           <label className="field"><span>السعر المبدئي (التكلفة)</span>
             <input type="number" step="any" value={form.cost} onChange={(e) => setForm({ ...form, cost: e.target.value })} /></label>
+          <label className="field"><span>سعر البيع</span>
+            <input type="number" step="any" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} /></label>
           <label className="field"><span>المورد</span>
             <input list="suppliers-dl" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="اسم المورد..." />
             <datalist id="suppliers-dl">
@@ -371,7 +371,7 @@ export default function ProductsPage() {
                     checked={allFiltered.length > 0 && selected.size === allFiltered.length}
                   />
                 </th>
-                <th></th><th>الكود</th><th>اسم الصنف</th><th>المورد</th><th>سعر البيع</th><th>جملة</th><th>السعر المبدئي</th><th>المخزون</th><th>إجراءات</th>
+                <th></th><th>الكود</th><th>اسم الصنف</th><th>المورد</th><th>السعر المبدئي</th><th>جملة</th><th>سعر البيع</th><th>المخزون</th><th>إجراءات</th>
               </tr>
             </thead>
             <tbody>
@@ -392,9 +392,9 @@ export default function ProductsPage() {
                   <td><b>{p.code}</b></td>
                   <td>{p.name}{p.packQty > 0 ? <small className="muted"> ({p.packName || 'عبوة'} {p.packQty})</small> : ''}</td>
                   <td>{p.category && p.category !== 'أدوات منزلية' ? <span className="badge blue">{p.category}</span> : <span className="muted">—</span>}</td>
-                  <td>{num(p.price, ar)}</td>
-                  <td>{(p.priceWholesale || 0) > 0 ? num(p.priceWholesale, ar) : <span className="muted">—</span>}</td>
                   <td className="muted">{num(p.cost || 0, ar)}</td>
+                  <td>{(p.priceWholesale || 0) > 0 ? num(p.priceWholesale, ar) : <span className="muted">—</span>}</td>
+                  <td>{num(p.price, ar)}</td>
                   <td>
                     <span className={`badge ${(Number(p.stock) || 0) <= (settings.lowStock || 5) ? 'red' : 'green'}`}>
                       {num(p.stock || 0, ar)}
