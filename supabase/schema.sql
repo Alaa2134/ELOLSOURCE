@@ -67,8 +67,12 @@ create table if not exists settings (
   updated_at timestamptz default now()
 );
 
--- تفعيل RLS مع سماح كامل بمفتاح anon (نظام داخلي لمحل واحد)
--- لو عايز أمان أعلى: اعمل مستخدم Supabase Auth وعدّل السياسات دي
+-- تفعيل RLS (Row Level Security) على كل الجداول — طبقة حماية على السحابة
+-- ملاحظة أمان: النظام بيستخدم مفتاح anon مشترك عشان يشتغل أوف لاين ويتزامن ببساطة،
+--   فالسياسات بتسمح بالقراءة والكتابة بالمفتاح ده (زي أي نظام محل واحد).
+--   *كلمات السر (أدمن/محاسب/كاشير/استعلام) مش بتترفع للسحابة خالص* — بتفضل محلية
+--   على كل جهاز، فحتى لو حد وصل للمفتاح ميقدرش يقرا كلمات السر.
+--   لأمان أعلى (فصل كل مستخدم): فعّل Supabase Auth وغيّر using(true) لـ using(auth.uid() is not null).
 alter table products enable row level security;
 alter table customers enable row level security;
 alter table invoices enable row level security;
