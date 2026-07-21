@@ -18,6 +18,7 @@ import {
 } from '@/lib/db';
 import { fmtDate } from '@/lib/format';
 import { maybeSendDailyReport, maybeSendDebtReminders } from '@/lib/wa';
+import GlobalSearch from '@/components/GlobalSearch';
 
 // roles: مين يشوف الصفحة — perm: صلاحية بتسمح للكاشير لو الأدمن فعّلها
 const NAV = [
@@ -26,6 +27,7 @@ const NAV = [
   { href: '/', label: '📊 لوحة التحكم', title: 'لوحة التحكم', roles: ['admin', 'accountant'] },
   { href: '/payments', label: '💵 سند قبض', title: 'سند قبض', roles: ['admin', 'cashier', 'accountant'] },
   { href: '/reps', label: '🛵 تحصيل المندوبين', title: 'تحصيل المندوبين', roles: ['admin', 'accountant'] },
+  { href: '/debts', label: '📕 متابعة الآجل', title: 'متابعة الآجل والمديونيات', roles: ['admin', 'accountant'] },
   { href: '/expenses', label: '💸 المصاريف اليومية', title: 'المصاريف اليومية', roles: ['admin', 'cashier', 'accountant'] },
   { href: '/invoices', label: '📁 الفواتير', title: 'الفواتير', roles: ['admin', 'cashier', 'accountant'] },
   { href: '/returns', label: '↩️ مرتجع بيع', title: 'مرتجع بيع', roles: ['admin', 'cashier'] },
@@ -276,23 +278,7 @@ export default function Shell({ children }) {
         <header className="topbar no-print">
           <div className="title">{current ? current.title : s.companyName}</div>
           <div className="meta">
-            <input
-              className="printer-select"
-              style={{ maxWidth: 140 }}
-              placeholder="🔍 رقم فاتورة + Enter"
-              value={invQ}
-              onChange={(e) => setInvQ(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key !== 'Enter' || !invQ.trim()) return;
-                const inv = listInvoices().find((x) => String(x.number) === invQ.trim());
-                if (inv) {
-                  setInvQ('');
-                  router.push(`/print/${inv.id}`);
-                } else {
-                  alert(`مفيش فاتورة بالرقم ${invQ.trim()}`);
-                }
-              }}
-            />
+            <GlobalSearch />
             <select
               className="printer-select"
               title="اختيار الطابعة"

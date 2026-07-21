@@ -159,6 +159,18 @@ export default function PosPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [products, customerName]);
 
+  // اختصارات الكيبورد للكاشير: F2 فاتورة جديدة · F4 حفظ وطباعة · F3 ركّز على الصنف
+  useEffect(() => {
+    function onFn(e) {
+      if (e.key === 'F2') { e.preventDefault(); newInvoice(); }
+      else if (e.key === 'F4') { e.preventDefault(); if (!saved) save(true); }
+      else if (e.key === 'F3') { e.preventDefault(); focusCell(0, 'code'); }
+    }
+    window.addEventListener('keydown', onFn);
+    return () => window.removeEventListener('keydown', onFn);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saved, rows, customerName, payment, paid, extraDisc, rep, editingInv]);
+
   // تنبيه المديونية عند اختيار العميل — بيتعطل لحظة فتح فاتورة محفوظة عشان قيمها المسجلة متتمسحش
   useEffect(() => {
     if (editLoadRef.current) { editLoadRef.current = false; return; }
@@ -754,6 +766,7 @@ export default function PosPage() {
             </button>
             <p className="muted" style={{ fontSize: 12, margin: 0 }}>
               💡 اكتب الكود أو الاسم وهتظهر الاقتراحات — Enter بينقلك بين الخانات — أو <b>امسح الباركود بسكانر الجهاز</b> (USB/بلوتوث) والصنف هيتضاف لوحده.
+              <br />⌨️ اختصارات: <b>F2</b> فاتورة جديدة · <b>F3</b> ركّز على الصنف · <b>F4</b> حفظ وطباعة.
             </p>
           </div>
         </div>
