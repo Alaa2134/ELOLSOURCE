@@ -22,6 +22,7 @@ import {
 import { SCHEMA_SQL, DRIVE_SCRIPT } from '@/lib/setupTexts';
 import { num, todayISO } from '@/lib/format';
 import InvoiceDoc from '@/components/InvoiceDoc';
+import { confirmBox, dangerBox } from '@/lib/ui';
 
 // فاتورة تجريبية للمعاينة الحية في تخصيص الشكل
 const DEMO_INVOICE = {
@@ -137,8 +138,8 @@ export default function AdminPage() {
     setS((prev) => ({ ...prev, cashiers: getSettings().cashiers })); // نحدّث الكاشيرين بس من غير ما نلغي أي تعديلات تانية
   }
 
-  function removeCashier(id, name) {
-    if (!confirm(`حذف الكاشير "${name}"؟ مش هيقدر يدخل بكلمة سره بعد كده.`)) return;
+  async function removeCashier(id, name) {
+    if (!(await dangerBox({ message: `حذف الكاشير "${name}"؟\nمش هيقدر يدخل بكلمة سره بعد كده.`, confirmText: 'احذف الكاشير' }))) return;
     deleteCashier(id);
     setCashierMsg('🗑️ اتحذف');
     reloadCashiers();
@@ -537,13 +538,13 @@ export default function AdminPage() {
           <Link href="/whatsapp" className="btn btn-green">💬 إعدادات الواتساب</Link>
           <Link href="/reports" className="btn">📈 التقارير الكاملة</Link>
           <button className="btn" onClick={async () => {
-            if (!confirm('تنظيف الأصناف المكررة (اللي بنفس الكود اترفعت من أكتر من جهاز)؟')) return;
+            if (!(await confirmBox({ title: 'تنظيف المكرر', icon: '🧹', message: 'تنظيف الأصناف المكررة (اللي بنفس الكود اترفعت من أكتر من جهاز)؟', confirmText: 'نظّف' }))) return;
             setMsg('⏳ جاري التنظيف...');
             const n = await cleanupDuplicateProducts();
             setMsg(n ? `✅ تم حذف ${n} صنف مكرر` : '✅ مفيش أصناف مكررة');
           }}>🧹 تنظيف الأصناف المكررة</button>
           <button className="btn-accent" title="بيرفع شغلك المحلي وبعدين بيسحب كل البيانات نضيفة من السحابة — بيصلح أي لخبطة" onClick={async () => {
-            if (!confirm('🩺 إعادة ربط الجهاز ده بالسحابة؟\n\nهيرفع أي شغل محلي الأول، وبعدين يمسح النسخة المحلية ويسحب كل البيانات نضيفة من السحابة.\nده بيصلح أي لخبطة (تكرار / أسماء قديمة / بيانات ناقصة) في دقيقة.')) return;
+            if (!(await confirmBox({ title: '🩺 إعادة ربط بالسحابة', message: 'هيرفع أي شغل محلي الأول، وبعدين يسحب كل البيانات نضيفة من السحابة.\nده بيصلح أي لخبطة (تكرار / أسماء قديمة / بيانات ناقصة) في دقيقة.', confirmText: 'ابدأ الإصلاح' }))) return;
             setMsg('⏳ بنعيد ربط الجهاز بالسحابة... متقفلش الصفحة');
             const r = await resetFromCloud();
             if (r.ok) {

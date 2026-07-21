@@ -20,6 +20,7 @@ import {
 } from '@/lib/db';
 import { num, todayISO, fmtDate, normalizePhone } from '@/lib/format';
 import { buildMessage, invoiceLink, waMeLink, gatewaySend, gatewayStatus, notifyAdmin } from '@/lib/wa';
+import { confirmBox, promptBox } from '@/lib/ui';
 import ProductPicker from '@/components/ProductPicker';
 import BarcodeScanner from '@/components/BarcodeScanner';
 
@@ -290,11 +291,12 @@ export default function PosPage() {
       const newDebt = (prevDebt - debtAdd) + remaining;
       if (limit > 0 && newDebt > limit) {
         if (role === 'admin') {
-          if (!confirm(`⚠️ تجاوز حد الائتمان!\nحد العميل: ${limit}\nمديونيته هتوصل: ${newDebt.toFixed(2)}\n\nتكمل على مسئوليتك؟`)) return;
+          if (!(await confirmBox({ title: '⚠️ تجاوز حد الائتمان', danger: true, message: `حد العميل: ${limit}\nمديونيته هتوصل: ${newDebt.toFixed(2)}\n\nتكمل على مسئوليتك؟`, confirmText: 'كمّل' }))) return;
         } else {
-          const pass = prompt(
-            `⛔ العميل هيتجاوز حد الائتمان (${limit} — هيوصل ${newDebt.toFixed(2)})\nمحتاج موافقة الأدمن: اكتب كلمة سر الأدمن للمتابعة`
-          );
+          const pass = await promptBox({
+            title: '⛔ تجاوز حد الائتمان', icon: '🔐', password: true, placeholder: 'كلمة سر الأدمن',
+            message: `العميل هيتجاوز حد الائتمان (${limit} — هيوصل ${newDebt.toFixed(2)})\nمحتاج موافقة الأدمن للمتابعة`,
+          });
           if (pass !== settings.adminPassword) { showToast('⛔ اتلغت — تجاوز حد الائتمان'); return; }
         }
       }

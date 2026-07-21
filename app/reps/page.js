@@ -10,6 +10,7 @@ import {
   getSettings,
 } from '@/lib/db';
 import { num, fmtDate, todayISO } from '@/lib/format';
+import { promptBox } from '@/lib/ui';
 
 export default function RepsPage() {
   const [settings, setSettings] = useState(null);
@@ -42,12 +43,13 @@ export default function RepsPage() {
     byRep[inv.rep].push(inv);
   }
 
-  function collect(inv) {
+  async function collect(inv) {
     const remaining = inv.totals?.remaining || 0;
-    const val = prompt(
-      `تحصيل من المندوب ${inv.rep} — فاتورة ${inv.number} (${inv.customer?.name})\nالمتبقي: ${num(remaining)} ${settings.currency}\nاكتب المبلغ المستلم:`,
-      String(remaining)
-    );
+    const val = await promptBox({
+      title: `تحصيل من ${inv.rep}`, icon: '🛵',
+      message: `فاتورة ${inv.number} (${inv.customer?.name})\nالمتبقي: ${num(remaining)} ${settings.currency}\nاكتب المبلغ المستلم:`,
+      default: String(remaining), confirmText: 'حصّل',
+    });
     if (val === null) return;
     const amount = Number(val) || 0;
     if (amount <= 0) return;

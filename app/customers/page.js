@@ -4,6 +4,7 @@ import { listCustomers, saveCustomer, deleteCustomer, listInvoices, getSettings,
 import { num } from '@/lib/format';
 import { waMeLink } from '@/lib/wa';
 import { parsePdfCustomers } from '@/lib/pdfImport';
+import { dangerBox } from '@/lib/ui';
 
 const empty = { name: '', phone: '', address: '', notes: '', creditLimit: '', priceType: 'قطاعي' };
 
@@ -190,7 +191,7 @@ export default function CustomersPage() {
                           href={waMeLink(c.phone, `أهلاً ${c.name} 🌹 معك ${settings.companyName}`)}>💬</a>
                       )}
                       <button className="btn-sm btn-primary" onClick={() => setForm({ ...empty, ...c })}>✏️</button>
-                      <button className="btn-sm btn-red" onClick={() => { if (confirm(`حذف "${c.name}"؟`)) { deleteCustomer(c.id); reload(); } }}>🗑️</button>
+                      <button className="btn-sm btn-red" onClick={async () => { if (await dangerBox(`حذف العميل "${c.name}"؟`)) { deleteCustomer(c.id); reload(); } }}>🗑️</button>
                     </td>
                   </tr>
                 );

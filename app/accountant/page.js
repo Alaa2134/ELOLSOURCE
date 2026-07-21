@@ -16,6 +16,7 @@ import {
   getRole,
 } from '@/lib/db';
 import { num, fmtDate, fmtTime, todayISO } from '@/lib/format';
+import { promptBox } from '@/lib/ui';
 import { waMeLink, buildMessage } from '@/lib/wa';
 
 function dayKey(iso) {
@@ -112,12 +113,13 @@ export default function AccountantPage() {
     showToast(`✅ اتسجل مصروف ${expDesc} — ${num(amt)}`);
   }
 
-  function collectRep(inv) {
+  async function collectRep(inv) {
     const remaining = inv.totals?.remaining || 0;
-    const val = prompt(
-      `تحصيل من المندوب ${inv.rep} — فاتورة ${inv.number} (${inv.customer?.name})\nالمتبقي: ${num(remaining)}\nالمبلغ المستلم:`,
-      String(remaining)
-    );
+    const val = await promptBox({
+      title: `تحصيل من ${inv.rep}`, icon: '🛵',
+      message: `فاتورة ${inv.number} (${inv.customer?.name})\nالمتبقي: ${num(remaining)}\nالمبلغ المستلم:`,
+      default: String(remaining), confirmText: 'حصّل',
+    });
     if (val === null) return;
     const amount = Number(val) || 0;
     if (amount <= 0) return;
