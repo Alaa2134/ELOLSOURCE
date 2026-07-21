@@ -15,6 +15,7 @@ import {
   customerDebt,
   settleCustomerDebt,
   getRole,
+  getCashierName,
   listReps,
 } from '@/lib/db';
 import { num, todayISO, fmtDate, normalizePhone } from '@/lib/format';
@@ -342,6 +343,7 @@ export default function PosPage() {
       date: todayISO(),
       type: 'بيع',
       payment,
+      cashier: getCashierName(), // مين عمل الفاتورة
       rep: rep.trim(),
       repStatus: rep.trim() ? 'مع المندوب' : '',
       customer: {

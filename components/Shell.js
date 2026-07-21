@@ -242,6 +242,11 @@ export default function Shell({ children }) {
           <div>
             <h1>{s.companyName}</h1>
             <small>{ROLE_LABEL[role] || ''}</small>
+            {typeof window !== 'undefined' && sessionStorage.getItem('saqqa_cashier_name') && (
+              <small style={{ display: 'block', color: 'var(--accent)', fontWeight: 700 }}>
+                👤 {sessionStorage.getItem('saqqa_cashier_name')}
+              </small>
+            )}
           </div>
         </div>
         <nav>
@@ -294,6 +299,7 @@ export default function Shell({ children }) {
               onClick={() => {
                 sessionStorage.removeItem('saqqa_authed');
                 sessionStorage.removeItem('saqqa_role');
+                sessionStorage.removeItem('saqqa_cashier_name');
                 router.replace('/login');
               }}
             >
