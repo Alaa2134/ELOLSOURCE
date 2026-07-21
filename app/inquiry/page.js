@@ -25,20 +25,27 @@ export default function InquiryPage() {
   const [showCount, setShowCount] = useState(30);
 
   useEffect(() => {
+    let alive = true;
     (async () => {
       cloudConfigFromHash(); // مسح QR الأدمن بيظبط الموبايل على السحابة تلقائياً
-      await seedIfEmpty();
-      let s = null;
-      let list = null;
-      if (cloudEnabled()) {
-        s = await fetchSettingsCloud();
-        list = await fetchProductsCloud();
-      }
-      setSettings({ ...getSettings(), ...(s || {}) });
-      setProducts(list && list.length ? list : listProducts());
+      try { await seedIfEmpty(); } catch {}
+      // نعرض المحلي فوراً (مفيش انتظار) — والعميل يقدر يبحث على طول
+      if (!alive) return;
+      setSettings(getSettings());
+      setProducts(listProducts());
       setAuthed(sessionStorage.getItem('saqqa_inquiry') === '1');
       setLoading(false);
+      // وبعدين نحدّث من السحابة ورا الكواليس لو متاحة (من غير ما نعلّق الصفحة)
+      if (cloudEnabled()) {
+        try {
+          const [s, list] = await Promise.all([fetchSettingsCloud(), fetchProductsCloud()]);
+          if (!alive) return;
+          if (s) setSettings((prev) => ({ ...prev, ...s }));
+          if (list && list.length) setProducts(list);
+        } catch {}
+      }
     })();
+    return () => { alive = false; };
   }, []);
 
   const allFiltered = useMemo(() => {
