@@ -1,6 +1,8 @@
 'use client';
 // استعلام الأسعار من الموبايل (آيفون/أندرويد) — محمي بكلمة سر خاصة
+// بياخد أسعاره ومنتجاته من نفس صفحة الأصناف والمخزون (محلي + سحابة)
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   listProducts,
   getSettings,
@@ -9,11 +11,17 @@ import {
   cloudEnabled,
   seedIfEmpty,
   cloudConfigFromHash,
+  getRole,
 } from '@/lib/db';
 import { num } from '@/lib/format';
 import BarcodeScanner from '@/components/BarcodeScanner';
 
+const ROLE_HOME = { admin: '/', cashier: '/pos', accountant: '/accountant' };
+// توحيد النص للبحث: بيشيل المسافات والنجمة عشان "6 1" أو "61" يلاقوا "6*1"
+const normSearch = (s) => String(s || '').replace(/[\s*]/g, '');
+
 export default function InquiryPage() {
+  const router = useRouter();
   const [authed, setAuthed] = useState(false);
   const [pass, setPass] = useState('');
   const [err, setErr] = useState('');
@@ -23,6 +31,13 @@ export default function InquiryPage() {
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
   const [showCount, setShowCount] = useState(30);
+  const [inApp, setInApp] = useState(false); // مفتوحة من جوه البرنامج؟ (نعرض زر رجوع)
+
+  // زر الرجوع للبرنامج (بيظهر بس لما تكون مفتوحة من جوه البرنامج مش من موبايل العميل)
+  function backToApp() {
+    const r = getRole();
+    router.push(ROLE_HOME[r] || '/pos');
+  }
 
   useEffect(() => {
     let alive = true;
@@ -34,6 +49,7 @@ export default function InquiryPage() {
       setSettings(getSettings());
       setProducts(listProducts());
       setAuthed(sessionStorage.getItem('saqqa_inquiry') === '1');
+      setInApp(sessionStorage.getItem('saqqa_authed') === '1'); // موظف داخل البرنامج
       setLoading(false);
       // وبعدين نحدّث من السحابة ورا الكواليس لو متاحة (من غير ما نعلّق الصفحة)
       if (cloudEnabled()) {
@@ -51,7 +67,14 @@ export default function InquiryPage() {
   const allFiltered = useMemo(() => {
     if (!q.trim()) return products;
     const t = q.trim();
-    return products.filter((p) => p.name.includes(t) || String(p.code).includes(t));
+    // بحث ذكي: كل كلمة في اللي كتبته لازم تكون موجودة في الاسم أو الكود
+    // (مش لازم متجاورين) — وبيتجاهل المسافات والنجمة عشان "6 1" يلاقي "6*1"
+    const words = t.split(/\s+/).map(normSearch).filter(Boolean);
+    return products.filter((p) => {
+      const hay = normSearch(p.name) + ' ' + String(p.code);
+      if (p.name.includes(t) || String(p.code).includes(t)) return true;
+      return words.every((w) => hay.includes(w));
+    });
   }, [q, products]);
   const filtered = allFiltered.slice(0, showCount);
 
@@ -82,6 +105,11 @@ export default function InquiryPage() {
             {err && <p className="red-text" style={{ marginTop: 8 }}>{err}</p>}
             <button className="btn-accent" style={{ marginTop: 14, width: '100%', justifyContent: 'center' }}>دخول</button>
           </form>
+          {inApp && (
+            <button className="btn-sm" style={{ marginTop: 12, width: '100%', justifyContent: 'center' }} onClick={backToApp}>
+              ⬅ رجوع للبرنامج
+            </button>
+          )}
         </div>
       </div>
     );
@@ -95,11 +123,15 @@ export default function InquiryPage() {
           <h2>{settings.companyName}</h2>
           <small>استعلام الأسعار</small>
         </div>
-        <button
-          className="btn-sm"
-          style={{ marginRight: 'auto' }}
-          onClick={() => { sessionStorage.removeItem('saqqa_inquiry'); setAuthed(false); }}
-        >🔒</button>
+        <div style={{ marginRight: 'auto', display: 'flex', gap: 6 }}>
+          {inApp && (
+            <button className="btn-sm btn-accent" onClick={backToApp}>⬅ رجوع للبرنامج</button>
+          )}
+          <button
+            className="btn-sm"
+            onClick={() => { sessionStorage.removeItem('saqqa_inquiry'); setAuthed(false); }}
+          >🔒</button>
+        </div>
       </div>
       <div className="inquiry-body">
         <div style={{ display: 'flex', gap: 8 }}>
