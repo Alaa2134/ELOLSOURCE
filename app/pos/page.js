@@ -39,6 +39,24 @@ function beep() {
   } catch {}
 }
 
+// صفارة تحذير (نغمة منخفضة متكررة) — لما البيع يقل عن الحد الأدنى
+function warnBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [0, 0.18].forEach((t) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'square';
+      osc.frequency.value = 320;
+      gain.gain.value = 0.18;
+      osc.start(ctx.currentTime + t);
+      osc.stop(ctx.currentTime + t + 0.14);
+    });
+  } catch {}
+}
+
 const emptyRow = () => ({ code: '', name: '', qty: 1, price: '', disc: 0, notes: '', unit: '' });
 
 export default function PosPage() {
@@ -188,6 +206,35 @@ export default function PosPage() {
     return p.price;
   }
 
+  // الحد الأدنى المسموح لبيع الصنف ده (حسب نوع العميل) — 0 يعني مفيش صنف/سعر
+  function minPriceOf(r) {
+    if (r.unit === 'pack') return 0; // العبوة سعرها الخاص
+    const p = products.find((x) => String(x.code) === String(r.code));
+    return p ? Number(priceFor(p)) || 0 : 0;
+  }
+  // الصف بيبيع تحت الحد الأدنى؟
+  function belowMin(r) {
+    const m = minPriceOf(r);
+    return m > 0 && Number(r.price) > 0 && Number(r.price) < m;
+  }
+
+  // تغيير السعر مع تحذير بصوت لو نزل تحت الحد الأدنى للبيع
+  function onPriceChange(i, val) {
+    setRows((prev) => {
+      const wasBelow = belowMin(prev[i]);
+      const next = prev.map((r, idx) => (idx === i ? { ...r, price: val } : r));
+      const nowBelow = belowMin(next[i]);
+      if (nowBelow && !wasBelow) {
+        warnBeep();
+        const m = minPriceOf(next[i]);
+        showToast(`⚠️ السعر أقل من الحد الأدنى للبيع (${num(m, ar)} ${settings.currency}) — راجع "${next[i].name}"`);
+      }
+      const last = next[next.length - 1];
+      if (last.code || last.name) next.push(emptyRow());
+      return next;
+    });
+  }
+
   function lookupCode(i, code) {
     const p = findProduct(code);
     if (p) {
@@ -283,6 +330,19 @@ export default function PosPage() {
         };
       });
     if (!items.length && !debtAdd) { showToast('⚠️ أضف صنف واحد على الأقل'); return; }
+
+    // تحذير: أصناف باعت تحت الحد الأدنى — تأكيد قبل الحفظ
+    const under = rows.filter((r) => (r.code || r.name) && Number(r.qty) > 0 && belowMin(r));
+    if (under.length) {
+      warnBeep();
+      const lines = under.map((r) => `• ${r.name}: بسعر ${num(r.price, ar)} (الحد الأدنى ${num(minPriceOf(r), ar)})`).join('\n');
+      const okUnder = await confirmBox({
+        title: '⚠️ بيع تحت الحد الأدنى', danger: true, icon: '🔻',
+        message: `فيه ${under.length} صنف بسعر أقل من الحد الأدنى للبيع:\n${lines}\n\nتأكيد البيع بالأسعار دي؟`,
+        confirmText: 'أيوة، أكمل البيع',
+      });
+      if (!okUnder) return;
+    }
 
     // فحص حد الائتمان قبل البيع الآجل
     if (remaining > 0 && customerName) {
@@ -652,11 +712,13 @@ export default function PosPage() {
                     </td>
                     <td>
                       <input
-                        className="num" type="number" min="0" step="any"
+                        className={`num ${belowMin(r) ? 'price-below-min' : ''}`}
+                        type="number" min="0" step="any"
                         data-r={i} data-c="price"
                         value={r.price}
                         readOnly={!canPrice}
-                        onChange={(e) => updateRow(i, { price: e.target.value })}
+                        title={belowMin(r) ? `⚠️ أقل من الحد الأدنى (${num(minPriceOf(r), ar)})` : ''}
+                        onChange={(e) => onPriceChange(i, e.target.value)}
                         onKeyDown={(e) => onKey(e, i, 'price')}
                       />
                     </td>

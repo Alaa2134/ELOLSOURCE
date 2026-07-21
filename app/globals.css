@@ -787,3 +787,12 @@ table.tbl tr:hover td { background: #fef3ec; }
 .dlg-danger { background: var(--red); color: #fff; }
 .dlg-cancel { background: #eef1f5; color: #445; }
 .dlg-btn:active { transform: translateY(1px); }
+
+/* تحذير: سعر البيع أقل من الحد الأدنى */
+.pos-grid td input.price-below-min {
+  background: #fde3e3 !important;
+  color: var(--red);
+  font-weight: 900;
+  box-shadow: inset 0 0 0 2px var(--red);
+  border-radius: 4px;
+}
