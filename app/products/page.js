@@ -13,6 +13,7 @@ import {
 } from '@/lib/db';
 import { num } from '@/lib/format';
 import { parsePdfProducts } from '@/lib/pdfImport';
+import { confirmBox, dangerBox, promptBox } from '@/lib/ui';
 
 const empty = {
   code: '', name: '', price: '', cost: '', stock: '', barcode: '', category: 'أدوات منزلية',
@@ -143,8 +144,8 @@ export default function ProductsPage() {
   async function deleteSelected() {
     if (!selected.size) { setMsg('⚠️ حدد أصناف الأول (علّم على المربعات في الجدول)'); return; }
     if (getRole() !== 'admin') { setMsg('⛔ المسح للأدمن بس'); return; }
-    if (!confirm(`⚠️ مسح ${selected.size} صنف محدد نهائياً من البرنامج والسحابة؟`)) return;
-    const pass = prompt('اكتب كلمة سر الأدمن للتأكيد:');
+    if (!(await dangerBox({ title: 'مسح الأصناف المحددة', message: `مسح ${selected.size} صنف محدد نهائياً من البرنامج والسحابة؟`, confirmText: 'امسح' }))) return;
+    const pass = await promptBox({ title: 'تأكيد الأدمن', icon: '🔐', message: 'اكتب كلمة سر الأدمن للتأكيد:', password: true, placeholder: '••••' });
     if (pass !== settings.adminPassword) { setMsg('⛔ كلمة السر غير صحيحة — مفيش حاجة اتمسحت'); return; }
     setProgress({ done: 0, total: 1, label: 'بنمسح الأصناف المحددة' });
     const n = await deleteProductsBulk([...selected]);
@@ -404,7 +405,7 @@ export default function ProductsPage() {
                     <button className="btn-sm btn-primary" onClick={() => setForm({ ...empty, ...p })}>✏️</button>
                     <button
                       className="btn-sm btn-red"
-                      onClick={() => { if (confirm(`حذف "${p.name}"؟`)) { deleteProduct(p.id); reload(); } }}
+                      onClick={async () => { if (await dangerBox(`حذف الصنف "${p.name}"؟`)) { deleteProduct(p.id); reload(); } }}
                     >🗑️</button>
                   </td>
                 </tr>

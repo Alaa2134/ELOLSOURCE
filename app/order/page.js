@@ -16,6 +16,7 @@ import {
 import { num, fmtDate, todayISO } from '@/lib/format';
 import { waMeLink, buildOrderText } from '@/lib/wa';
 import ProductPicker from '@/components/ProductPicker';
+import { dangerBox } from '@/lib/ui';
 
 const emptyRow = () => ({ code: '', name: '', qty: 1, note: '' });
 const MAX_AUTO = 60; // حد أقصى للنواقص المضافة تلقائياً في المرة الواحدة
@@ -243,8 +244,8 @@ export default function OrderPage() {
                     <button className="btn-sm btn-primary" title="لما البضاعة توصل حولها لفاتورة شراء بالأسعار"
                       onClick={() => router.push(`/purchases?order=${o.id}`)}>📥 وصلت — حوّلها شراء</button>
                   )}
-                  <button className="btn-sm btn-red" onClick={() => {
-                    if (confirm(`حذف طلب البضاعة رقم ${o.number}؟`)) { deleteOrder(o.id); reload(); }
+                  <button className="btn-sm btn-red" onClick={async () => {
+                    if (await dangerBox(`حذف طلب البضاعة رقم ${o.number}؟`)) { deleteOrder(o.id); reload(); }
                   }}>✕</button>
                 </td>
               </tr>

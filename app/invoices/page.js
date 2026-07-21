@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { listInvoices, deleteInvoice, getSettings, isAdmin } from '@/lib/db';
 import { num, fmtDate, fmtTime } from '@/lib/format';
 import { waMeLink, buildMessage, invoiceLink, notifyAdmin } from '@/lib/wa';
+import { dangerBox } from '@/lib/ui';
 
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState([]);
@@ -86,8 +87,8 @@ export default function InvoicesPage() {
                   {(isAdmin() || settings.perms?.allowDeleteInvoice) && (
                     <button
                       className="btn-sm btn-red"
-                      onClick={() => {
-                        if (confirm(`حذف الفاتورة رقم ${i.number}؟ سيتم إرجاع الكميات للمخزون.`)) {
+                      onClick={async () => {
+                        if (await dangerBox({ message: `حذف الفاتورة رقم ${i.number}؟\nهيتم إرجاع الكميات للمخزون.`, confirmText: 'احذف الفاتورة' })) {
                           deleteInvoice(i.id);
                           notifyAdmin(`🗑️ تم حذف فاتورة رقم ${i.number} (${i.customer?.name}) بقيمة ${i.totals?.net || 0}`);
                           reload();

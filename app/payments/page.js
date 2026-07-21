@@ -15,6 +15,7 @@ import {
 } from '@/lib/db';
 import { num, todayISO, fmtDate, fmtTime } from '@/lib/format';
 import { waMeLink, gatewaySend, gatewayStatus } from '@/lib/wa';
+import { dangerBox } from '@/lib/ui';
 
 export default function PaymentsPage() {
   const router = useRouter();
@@ -193,8 +194,8 @@ export default function PaymentsPage() {
                       )}
                       {isAdmin() && (
                         <button className="btn-sm btn-red"
-                          onClick={() => {
-                            if (confirm(`حذف السند رقم ${p.number}؟ سيتم إرجاع المبلغ لمديونية العميل.`)) {
+                          onClick={async () => {
+                            if (await dangerBox({ message: `حذف سند القبض رقم ${p.number}؟\nهيتم إرجاع المبلغ لمديونية العميل.`, confirmText: 'احذف السند' })) {
                               deletePayment(p.id);
                               reload();
                               setDebt(customerName ? customerDebt(customerName) : 0);

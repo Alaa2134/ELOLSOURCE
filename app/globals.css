@@ -751,3 +751,39 @@ table.tbl tr:hover td { background: #fef3ec; }
 
 /* أرقام عربية بخط واضح في الفاتورة */
 .inv-items td, .inv-meta-table td, .inv-totals, .inv-box { font-family: 'Amiri', serif; }
+
+/* ============ النوافذ المصمّمة (تأكيد/إدخال/تنبيه) ============ */
+.dlg-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(15, 30, 50, 0.55); backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  animation: dlgFade .15s ease;
+}
+@keyframes dlgFade { from { opacity: 0; } to { opacity: 1; } }
+.dlg-box {
+  background: #fff; border-radius: 18px; width: 100%; max-width: 420px;
+  padding: 26px 24px 20px; text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,.35);
+  border-top: 6px solid var(--accent);
+  animation: dlgPop .2s cubic-bezier(.2,.9,.3,1.3);
+}
+.dlg-box.danger { border-top-color: var(--red); }
+@keyframes dlgPop { from { transform: scale(.9) translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
+.dlg-icon { font-size: 46px; line-height: 1; margin-bottom: 8px; }
+.dlg-title { color: var(--brand); font-size: 20px; margin-bottom: 8px; }
+.dlg-box.danger .dlg-title { color: var(--red); }
+.dlg-msg { color: #445; font-size: 15px; line-height: 1.9; white-space: pre-line; margin-bottom: 6px; }
+.dlg-input {
+  width: 100%; margin-top: 14px; text-align: center; font-size: 18px;
+  padding: 12px; border: 2px solid var(--line); border-radius: 12px;
+}
+.dlg-input:focus { border-color: var(--accent); outline: none; }
+.dlg-actions { display: flex; gap: 10px; margin-top: 20px; }
+.dlg-btn {
+  flex: 1; padding: 13px; border-radius: 12px; font-size: 16px; font-weight: 800;
+  border: 0; cursor: pointer; font-family: inherit;
+}
+.dlg-ok { background: var(--accent); color: #fff; }
+.dlg-danger { background: var(--red); color: #fff; }
+.dlg-cancel { background: #eef1f5; color: #445; }
+.dlg-btn:active { transform: translateY(1px); }

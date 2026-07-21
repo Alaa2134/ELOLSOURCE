@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { listExpenses, saveExpense, deleteExpense, getSettings, isAdmin, getRole } from '@/lib/db';
 import { num, fmtDate, todayISO } from '@/lib/format';
+import { dangerBox } from '@/lib/ui';
 
 function dayKey(iso) {
   const d = new Date(iso);
@@ -121,7 +122,7 @@ export default function ExpensesPage() {
                       <td><span className="badge blue">{x.by || '—'}</span></td>
                       <td>
                         {isAdmin() && (
-                          <button className="btn-sm btn-red" onClick={() => { if (confirm('حذف المصروف؟')) { deleteExpense(x.id); reload(); } }}>🗑️</button>
+                          <button className="btn-sm btn-red" onClick={async () => { if (await dangerBox('حذف المصروف ده؟')) { deleteExpense(x.id); reload(); } }}>🗑️</button>
                         )}
                       </td>
                     </tr>

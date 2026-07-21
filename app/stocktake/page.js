@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { listProducts, listStocktakes, saveStocktake, getSettings, getRole } from '@/lib/db';
 import { num, fmtDate, todayISO } from '@/lib/format';
+import { confirmBox } from '@/lib/ui';
 
 export default function StocktakePage() {
   const [settings, setSettings] = useState(null);
@@ -38,9 +39,9 @@ export default function StocktakePage() {
   const filtered = allFiltered.slice(0, 200);
   const totalDiffValue = counted.reduce((s, x) => s + x.diffValue, 0);
 
-  function commit() {
+  async function commit() {
     if (!counted.length) { setToast('⚠️ اكتب العدد الفعلي لصنف واحد على الأقل'); setTimeout(() => setToast(''), 3000); return; }
-    if (!confirm(`اعتماد الجرد؟ هيتم تحديث أرصدة ${counted.length} صنف.`)) return;
+    if (!(await confirmBox({ title: 'اعتماد الجرد', icon: '📋', message: `هيتم تحديث أرصدة ${counted.length} صنف بالأعداد الفعلية.`, confirmText: 'اعتمد الجرد' }))) return;
     saveStocktake({
       date: todayISO(),
       items: counted,

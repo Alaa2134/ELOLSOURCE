@@ -1,5 +1,6 @@
 import './globals.css';
 import Shell from '@/components/Shell';
+import DialogHost from '@/components/DialogHost';
 
 export const metadata = {
   title: 'السقا للأدوات المنزلية — نظام الكاشير',
@@ -26,6 +27,7 @@ export default function RootLayout({ children }) {
       </head>
       <body>
         <Shell>{children}</Shell>
+        <DialogHost />
       </body>
     </html>
   );
