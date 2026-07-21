@@ -15,6 +15,9 @@ import {
   cloudEnabled,
   cleanupDuplicateProducts,
   resetFromCloud,
+  listCashiers,
+  saveCashier,
+  deleteCashier,
 } from '@/lib/db';
 import { SCHEMA_SQL, DRIVE_SCRIPT } from '@/lib/setupTexts';
 import { num, todayISO } from '@/lib/format';
@@ -96,6 +99,10 @@ export default function AdminPage() {
   const [msg, setMsg] = useState('');
   const [stats, setStats] = useState({ today: 0, month: 0, count: 0 });
   const [phoneQr, setPhoneQr] = useState('');
+  // إدارة الكاشيرين بأسماء
+  const [cashiers, setCashiers] = useState([]);
+  const [newCashier, setNewCashier] = useState({ name: '', pin: '' });
+  const [cashierMsg, setCashierMsg] = useState('');
   // معالج الربط
   const [wizUrl, setWizUrl] = useState('');
   const [wizKey, setWizKey] = useState('');
@@ -119,8 +126,28 @@ export default function AdminPage() {
     setWizBusy(false);
   }
 
+  function reloadCashiers() { setCashiers(listCashiers()); }
+
+  function addCashier() {
+    const r = saveCashier(newCashier);
+    if (!r.ok) { setCashierMsg('⚠️ ' + r.reason); return; }
+    setNewCashier({ name: '', pin: '' });
+    setCashierMsg('✅ اتضاف الكاشير');
+    reloadCashiers();
+    setS((prev) => ({ ...prev, cashiers: getSettings().cashiers })); // نحدّث الكاشيرين بس من غير ما نلغي أي تعديلات تانية
+  }
+
+  function removeCashier(id, name) {
+    if (!confirm(`حذف الكاشير "${name}"؟ مش هيقدر يدخل بكلمة سره بعد كده.`)) return;
+    deleteCashier(id);
+    setCashierMsg('🗑️ اتحذف');
+    reloadCashiers();
+    setS((prev) => ({ ...prev, cashiers: getSettings().cashiers }));
+  }
+
   useEffect(() => {
     setS(getSettings());
+    reloadCashiers();
     const invoices = listInvoices();
     const now = new Date();
     const today = invoices.filter((i) => new Date(i.date).toDateString() === now.toDateString());
@@ -213,6 +240,41 @@ export default function AdminPage() {
           <p className="muted" style={{ marginTop: 10, fontSize: 12 }}>
             💡 لوحة التحكم والتقارير والإعدادات ولوحة الأدمن للأدمن فقط — الكاشير بيشوف بس اللي مسموح له بيه.
           </p>
+        </div>
+
+        <div className="card">
+          <h3>👥 كاشيرين بأسماء</h3>
+          <p className="muted" style={{ marginBottom: 10, fontSize: 13 }}>
+            كل كاشير له اسمه وكلمة سره — والفاتورة بتتسجّل باسم اللي عملها. أنشئ كاشير جديد أو احذف.
+          </p>
+          <table className="tbl" style={{ marginBottom: 10 }}>
+            <thead><tr><th>الاسم</th><th>كلمة السر</th><th></th></tr></thead>
+            <tbody>
+              {cashiers.map((c) => (
+                <tr key={c.id}>
+                  <td><b>{c.name}</b></td>
+                  <td dir="ltr">{c.pin}</td>
+                  <td style={{ textAlign: 'center' }}>
+                    <button className="btn-sm btn-red" onClick={() => removeCashier(c.id, c.name)}>🗑️ حذف</button>
+                  </td>
+                </tr>
+              ))}
+              {!cashiers.length && <tr><td colSpan={3} className="muted">مفيش كاشيرين بأسماء بعد — بيدخلوا بكلمة الكاشير العامة</td></tr>}
+            </tbody>
+          </table>
+          <div className="grid cols-3" style={{ gap: 8, alignItems: 'end' }}>
+            <label className="field"><span>اسم الكاشير</span>
+              <input value={newCashier.name} onChange={(e) => setNewCashier({ ...newCashier, name: e.target.value })} placeholder="مثال: كريم" /></label>
+            <label className="field"><span>كلمة سر الدخول</span>
+              <input dir="ltr" value={newCashier.pin} onChange={(e) => setNewCashier({ ...newCashier, pin: e.target.value })} placeholder="مثال: 1122" /></label>
+            <button className="btn-green" onClick={addCashier}>➕ إضافة كاشير</button>
+          </div>
+          <label style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 12, cursor: 'pointer' }}>
+            <input type="checkbox" style={{ width: 'auto' }} checked={!!s.requireNamedCashier}
+              onChange={(e) => setS({ ...s, requireNamedCashier: e.target.checked })} />
+            إلزام الدخول بكاشير باسمه (إلغاء كلمة الكاشير العامة)
+          </label>
+          {cashierMsg && <p style={{ marginTop: 8 }}>{cashierMsg}</p>}
         </div>
       </div>
 

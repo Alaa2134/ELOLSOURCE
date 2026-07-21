@@ -1,7 +1,9 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { getSettings } from '@/lib/db';
+import { resolveLogin } from '@/lib/db';
+
+const ROLE_HOME = { admin: '/', accountant: '/accountant', cashier: '/pos' };
 
 export default function LoginPage() {
   const router = useRouter();
@@ -10,19 +12,12 @@ export default function LoginPage() {
 
   function submit(e) {
     e.preventDefault();
-    const s = getSettings();
-    if (pin === (s.adminPassword || 'saber123456@')) {
+    const u = resolveLogin(pin);
+    if (u) {
       sessionStorage.setItem('saqqa_authed', '1');
-      sessionStorage.setItem('saqqa_role', 'admin');
-      router.replace('/');
-    } else if (pin === (s.accountantPassword || '3333')) {
-      sessionStorage.setItem('saqqa_authed', '1');
-      sessionStorage.setItem('saqqa_role', 'accountant');
-      router.replace('/accountant');
-    } else if (pin === (s.pin || '7974')) {
-      sessionStorage.setItem('saqqa_authed', '1');
-      sessionStorage.setItem('saqqa_role', 'cashier');
-      router.replace('/pos');
+      sessionStorage.setItem('saqqa_role', u.role);
+      sessionStorage.setItem('saqqa_cashier_name', u.name); // اسم اللي داخل — بيتسجل على الفاتورة
+      router.replace(ROLE_HOME[u.role] || '/pos');
     } else {
       setErr('كلمة السر غير صحيحة');
       setPin('');
