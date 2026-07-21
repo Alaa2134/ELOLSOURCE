@@ -1,8 +1,9 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
-import { listCustomers, saveCustomer, deleteCustomer, listInvoices, getSettings } from '@/lib/db';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { listCustomers, saveCustomer, deleteCustomer, listInvoices, getSettings, bulkImportCustomers } from '@/lib/db';
 import { num } from '@/lib/format';
 import { waMeLink } from '@/lib/wa';
+import { parsePdfCustomers } from '@/lib/pdfImport';
 
 const empty = { name: '', phone: '', address: '', notes: '', creditLimit: '', priceType: 'قطاعي' };
 
@@ -13,6 +14,41 @@ export default function CustomersPage() {
   const [form, setForm] = useState(empty);
   const [q, setQ] = useState('');
   const [showCount, setShowCount] = useState(120); // عرض تدريجي عشان الصفحة متتقلش مع عملاء كتير
+  const [pdfRows, setPdfRows] = useState(null); // معاينة عملاء الـ PDF قبل الإضافة
+  const [progress, setProgress] = useState(null);
+  const [msg, setMsg] = useState('');
+  const pdfRef = useRef(null);
+
+  async function onPdfFile(e) {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) return;
+    setMsg('');
+    setProgress({ done: 0, total: 1, label: 'بنقرا صفحات الملف' });
+    try {
+      const rows = await parsePdfCustomers(f, {
+        onProgress: (page, total) => setProgress({ done: page, total, label: 'بنقرا صفحات الملف' }),
+      });
+      setProgress(null);
+      if (!rows.length) setMsg('❌ معرفتش أطلع عملاء من الملف — لازم يكون فيه أسماء وأرقام تليفون واضحة');
+      else setPdfRows(rows.map((r) => ({ ...r, checked: true })));
+    } catch (err) {
+      setProgress(null);
+      setMsg('❌ فشل قراءة الملف: ' + err.message);
+    }
+  }
+
+  async function importPdfRows() {
+    const rows = pdfRows.filter((r) => r.checked && r.name);
+    setPdfRows(null);
+    setProgress({ done: 0, total: rows.length, label: 'بنستورد العملاء' });
+    const { added, updated } = await bulkImportCustomers(rows, (done, total) =>
+      setProgress({ done, total, label: 'بنستورد العملاء' })
+    );
+    setProgress(null);
+    setMsg(`✅ خلصنا: ${added} عميل جديد اتضاف — ${updated} عميل موجود اتحدّث (من غير تكرار)`);
+    reload();
+  }
 
   function reload() {
     setCustomers(listCustomers());
@@ -79,6 +115,48 @@ export default function CustomersPage() {
             {form.id && <button type="button" onClick={() => setForm(empty)}>إلغاء</button>}
           </div>
         </form>
+        <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <button className="btn-accent" onClick={() => pdfRef.current?.click()}>📄 استيراد عملاء من PDF</button>
+          <input ref={pdfRef} type="file" accept=".pdf" hidden onChange={onPdfFile} />
+          <span className="muted" style={{ fontSize: 12 }}>الملف لازم يكون فيه أسماء وأرقام تليفون (بيقرأ الاسم + الموبايل + العنوان)</span>
+          {msg && <b>{msg}</b>}
+        </div>
+
+        {progress && (
+          <div style={{ marginTop: 12, background: '#fff8f2', border: '1px solid var(--accent)', padding: 14, borderRadius: 8 }}>
+            <b>⏳ {progress.label}: تم {num(progress.done, ar)} من أصل {num(progress.total, ar)}</b>
+            <div style={{ background: '#eee', borderRadius: 6, height: 14, marginTop: 8, overflow: 'hidden' }}>
+              <div style={{ background: 'var(--accent)', height: '100%', transition: 'width .2s', width: `${progress.total ? Math.round((progress.done / progress.total) * 100) : 0}%` }} />
+            </div>
+          </div>
+        )}
+
+        {pdfRows && (
+          <div style={{ marginTop: 12, background: '#fff8f2', border: '1px solid var(--accent)', padding: 12, borderRadius: 8 }}>
+            <h3 style={{ marginBottom: 8 }}>📄 معاينة عملاء الـ PDF ({num(pdfRows.length, ar)}) — راجع وعدّل قبل الإضافة</h3>
+            <p className="muted" style={{ marginBottom: 8, fontSize: 13 }}>🔁 العميل الموجود قبل كده (بالتليفون أو الاسم) هيتحدّث بس — مش هيتكرر.</p>
+            <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+              <table className="tbl">
+                <thead><tr><th></th><th>الاسم</th><th>التليفون</th><th>العنوان</th></tr></thead>
+                <tbody>
+                  {pdfRows.map((r, i) => (
+                    <tr key={i}>
+                      <td><input type="checkbox" checked={r.checked}
+                        onChange={(e) => setPdfRows(pdfRows.map((x, xi) => xi === i ? { ...x, checked: e.target.checked } : x))} /></td>
+                      <td><input value={r.name} onChange={(e) => setPdfRows(pdfRows.map((x, xi) => xi === i ? { ...x, name: e.target.value } : x))} /></td>
+                      <td><input dir="ltr" style={{ width: 120 }} value={r.phone} onChange={(e) => setPdfRows(pdfRows.map((x, xi) => xi === i ? { ...x, phone: e.target.value } : x))} /></td>
+                      <td><input value={r.address} onChange={(e) => setPdfRows(pdfRows.map((x, xi) => xi === i ? { ...x, address: e.target.value } : x))} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+              <button className="btn-green" onClick={importPdfRows}>✅ إضافة المحدد ({num(pdfRows.filter((r) => r.checked).length, ar)})</button>
+              <button className="btn-red" onClick={() => setPdfRows(null)}>إلغاء</button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="card">
