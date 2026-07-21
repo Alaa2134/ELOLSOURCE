@@ -41,6 +41,18 @@ export default function OrderPage() {
   }
   useEffect(reload, []);
 
+  // جايين من صفحة النواقص (?supplier=X&low=1) — نختار المورد ونجيب نواقصه تلقائياً
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    const sup = p.get('supplier');
+    if (!sup || !products.length) return;
+    setSupplierName(sup);
+    const sp = suppliers.find((x) => x.name === sup);
+    if (sp?.phone) setSupplierPhone(sp.phone);
+    if (p.get('low') === '1') setTimeout(() => addLowStock(sup), 50);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products]);
+
   // الموردين المقترحين: المسجلين + أسماء الموردين اللي جايه من ملف الأصناف (خانة القسم)
   const supplierNames = useMemo(() => {
     const set = new Set(suppliers.map((s) => s.name));
@@ -83,15 +95,15 @@ export default function OrderPage() {
   }
 
   // النواقص تلقائياً: أصناف المورد ده اللي مخزونها وصل لحد النواقص أو أقل
-  function addLowStock() {
-    if (!supplierName) { showToast('⚠️ اختار المورد الأول عشان نجيب نواقصه'); return; }
+  function addLowStock(supName = supplierName) {
+    if (!supName) { showToast('⚠️ اختار المورد الأول عشان نجيب نواقصه'); return; }
     const limit = Number(settings.lowStock) || 5;
     const existing = new Set(rows.map((r) => String(r.code)).filter(Boolean));
     const candidates = products.filter(
-      (p) => p.category === supplierName && (Number(p.stock) || 0) <= limit && !existing.has(String(p.code))
+      (p) => p.category === supName && (Number(p.stock) || 0) <= limit && !existing.has(String(p.code))
     );
     if (!candidates.length) {
-      showToast(`مفيش نواقص للمورد "${supplierName}" (أصناف مخزونها ≤ ${limit})`);
+      showToast(`مفيش نواقص للمورد "${supName}" (أصناف مخزونها ≤ ${limit})`);
       return;
     }
     const take = candidates.slice(0, MAX_AUTO);
@@ -105,8 +117,8 @@ export default function OrderPage() {
     });
     showToast(
       take.length < candidates.length
-        ? `➕ اتضاف ${take.length} صنف من نواقص "${supplierName}" (في ${candidates.length - take.length} كمان — دوس تاني بعد ما تراجع)`
-        : `➕ اتضاف ${take.length} صنف من نواقص "${supplierName}" — راجع الكميات`
+        ? `➕ اتضاف ${take.length} صنف من نواقص "${supName}" (في ${candidates.length - take.length} كمان — دوس تاني بعد ما تراجع)`
+        : `➕ اتضاف ${take.length} صنف من نواقص "${supName}" — راجع الكميات`
     );
   }
 

@@ -11,6 +11,7 @@ import {
   flushPending,
   getRole,
   listInvoices,
+  listProducts,
   getSupabase,
   runDailyBackup,
   ensureFullPush,
@@ -32,6 +33,7 @@ const NAV = [
   { href: '/order', label: '📋 طلب بضاعة من مورد', title: 'طلب بضاعة من مورد', roles: ['admin', 'accountant'] },
   { href: '/statement', label: '📄 كشف حساب', title: 'كشف حساب عميل', roles: ['admin', 'cashier', 'accountant'] },
   { href: '/products', label: '📦 الأصناف والمخزون', title: 'الأصناف والمخزون', roles: ['admin', 'cashier'] },
+  { href: '/lowstock', label: '📉 النواقص', title: 'النواقص', roles: ['admin', 'cashier', 'accountant'] },
   { href: '/customers', label: '👥 العملاء', title: 'العملاء', roles: ['admin', 'cashier'] },
   { href: '/barcodes', label: '🏷️ استيكر باركود', title: 'استيكر باركود', roles: ['admin', 'cashier'] },
   { href: '/stocktake', label: '📋 جرد المخزون', title: 'جرد المخزون', roles: ['admin', 'cashier'] },
@@ -65,6 +67,7 @@ export default function Shell({ children }) {
   const [printers, setPrinters] = useState([]);
   const [printerName, setPrinterName] = useState('');
   const [invQ, setInvQ] = useState(''); // بحث سريع برقم الفاتورة
+  const [lowCount, setLowCount] = useState(0); // عدد الأصناف الناقصة (بادج القايمة)
   const lastBeat = useRef(Date.now());
 
   const bare =
@@ -91,6 +94,12 @@ export default function Shell({ children }) {
         router.replace(ROLE_HOME[r] || '/pos');
         return;
       }
+      // عدد النواقص للبادج (خفيف — بيتحسب مع كل تنقل عشان يفضل محدّث)
+      try {
+        const st = getSettings();
+        const limit = Number(st.lowStock) || 5;
+        setLowCount(listProducts().filter((p) => (Number(p.stock) || 0) <= limit).length);
+      } catch {}
     }
     setReady(true);
   }, [pathname, bare, router]);
@@ -252,7 +261,10 @@ export default function Shell({ children }) {
         <nav>
           {visibleNav.map((n) => (
             <Link key={n.href} href={n.href} className={pathname === n.href ? 'active' : ''}>
-              {n.label}
+              <span>{n.label}</span>
+              {n.href === '/lowstock' && lowCount > 0 && (
+                <span className="nav-badge">{lowCount}</span>
+              )}
             </Link>
           ))}
         </nav>
