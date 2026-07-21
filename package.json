@@ -6,7 +6,7 @@
   "scripts": {
     "predev": "node scripts/copy-pdf-worker.mjs && node scripts/gen-setup-texts.mjs",
     "dev": "next dev",
-    "prebuild": "node scripts/copy-pdf-worker.mjs && node scripts/gen-setup-texts.mjs",
+    "prebuild": "node scripts/copy-pdf-worker.mjs && node scripts/gen-setup-texts.mjs && node scripts/gen-version.mjs",
     "build": "next build",
     "start": "next start"
   },

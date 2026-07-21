@@ -14,6 +14,7 @@ import {
   pushAllToCloud,
   cloudEnabled,
   cleanupDuplicateProducts,
+  resetFromCloud,
 } from '@/lib/db';
 import { SCHEMA_SQL, DRIVE_SCRIPT } from '@/lib/setupTexts';
 import { num, todayISO } from '@/lib/format';
@@ -479,6 +480,17 @@ export default function AdminPage() {
             const n = await cleanupDuplicateProducts();
             setMsg(n ? `✅ تم حذف ${n} صنف مكرر` : '✅ مفيش أصناف مكررة');
           }}>🧹 تنظيف الأصناف المكررة</button>
+          <button className="btn-accent" title="بيرفع شغلك المحلي وبعدين بيسحب كل البيانات نضيفة من السحابة — بيصلح أي لخبطة" onClick={async () => {
+            if (!confirm('🩺 إعادة ربط الجهاز ده بالسحابة؟\n\nهيرفع أي شغل محلي الأول، وبعدين يمسح النسخة المحلية ويسحب كل البيانات نضيفة من السحابة.\nده بيصلح أي لخبطة (تكرار / أسماء قديمة / بيانات ناقصة) في دقيقة.')) return;
+            setMsg('⏳ بنعيد ربط الجهاز بالسحابة... متقفلش الصفحة');
+            const r = await resetFromCloud();
+            if (r.ok) {
+              setMsg(`✅ الجهاز اتربط من جديد: ${r.counts.products} صنف و${r.counts.invoices} فاتورة متطابقين مع السحابة — هنعمل تحديث للصفحة`);
+              setTimeout(() => window.location.reload(), 2500);
+            } else {
+              setMsg('⚠️ ' + r.reason);
+            }
+          }}>🩺 إصلاح شامل — إعادة ربط بالسحابة</button>
         </div>
       </div>
 
