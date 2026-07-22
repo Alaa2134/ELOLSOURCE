@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { listExpenses, saveExpense, deleteExpense, getSettings, isAdmin, getRole } from '@/lib/db';
 import { num, fmtDate, todayISO } from '@/lib/format';
 import { dangerBox } from '@/lib/ui';
+import { useDraft, clearDraft } from '@/lib/useDraft';
+
+const DRAFT_KEY = 'saqqa_expense_draft';
 
 function dayKey(iso) {
   const d = new Date(iso);
@@ -54,6 +57,19 @@ export default function ExpensesPage() {
     return Object.entries(g).sort((a, b) => b[0].localeCompare(a[0]));
   }, [filtered]);
 
+  // حفظ مسودة المصروف تلقائياً — بترجع لو النور قطع أو البرنامج اتقفل
+  useDraft(DRAFT_KEY, { desc, name, amount, notes }, {
+    hasContent: (d) => (d.amount && Number(d.amount) > 0) || d.name || d.notes,
+    onRestore: (d) => {
+      if (d.desc) setDesc(d.desc);
+      if (d.name) setName(d.name);
+      if (d.amount) setAmount(d.amount);
+      if (d.notes) setNotes(d.notes);
+      setToast('🔄 رجّعنا المصروف اللي كنت بتكتبه');
+      setTimeout(() => setToast(''), 3000);
+    },
+  });
+
   if (!settings) return null;
   const ar = settings.arabicDigits;
   const total = filtered.reduce((s, x) => s + (Number(x.amount) || 0), 0);
@@ -66,6 +82,7 @@ export default function ExpensesPage() {
     setAmount('');
     setName('');
     setNotes('');
+    clearDraft(DRAFT_KEY); // اتحفظ رسمي — المسودة خلصت
     reload();
     setToast('✅ تم تسجيل المصروف');
     setTimeout(() => setToast(''), 3000);

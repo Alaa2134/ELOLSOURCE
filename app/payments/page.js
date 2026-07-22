@@ -16,6 +16,9 @@ import {
 import { num, todayISO, fmtDate, fmtTime } from '@/lib/format';
 import { waMeLink, gatewaySend, gatewayStatus } from '@/lib/wa';
 import { dangerBox } from '@/lib/ui';
+import { useDraft, clearDraft } from '@/lib/useDraft';
+
+const DRAFT_KEY = 'saqqa_payment_draft';
 
 export default function PaymentsPage() {
   const router = useRouter();
@@ -47,6 +50,18 @@ export default function PaymentsPage() {
     setDebt(customerName ? customerDebt(customerName) : 0);
     setSaved(null);
   }, [customerName]);
+
+  // حفظ مسودة السند تلقائياً — بترجع لو النور قطع أو البرنامج اتقفل
+  useDraft(DRAFT_KEY, { customerName, amount, method, notes }, {
+    hasContent: (d) => (d.amount && Number(d.amount) > 0) || d.customerName,
+    onRestore: (d) => {
+      if (d.customerName) setCustomerName(d.customerName);
+      if (d.amount) setAmount(d.amount);
+      if (d.method) setMethod(d.method);
+      if (d.notes) setNotes(d.notes);
+      showToast('🔄 رجّعنا السند اللي كنت بتكتبه — كمّل من حيث وقفت');
+    },
+  });
 
   if (!settings) return null;
   const ar = settings.arabicDigits;
@@ -86,6 +101,8 @@ export default function PaymentsPage() {
     setDebt(customerDebt(customerName));
     reload();
     setAmount('');
+    setNotes('');
+    clearDraft(DRAFT_KEY); // اتحفظ رسمي — المسودة خلصت
     showToast(`✅ تم حفظ سند القبض رقم ${p.number}`);
 
     const wa = settings.wa || {};

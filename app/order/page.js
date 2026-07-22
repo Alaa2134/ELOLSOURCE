@@ -17,6 +17,9 @@ import { num, fmtDate, todayISO } from '@/lib/format';
 import { waMeLink, buildOrderText } from '@/lib/wa';
 import ProductPicker from '@/components/ProductPicker';
 import { dangerBox } from '@/lib/ui';
+import { useDraft, clearDraft } from '@/lib/useDraft';
+
+const DRAFT_KEY = 'saqqa_order_draft';
 
 const emptyRow = () => ({ code: '', name: '', qty: 1, note: '' });
 const MAX_AUTO = 60; // حد أقصى للنواقص المضافة تلقائياً في المرة الواحدة
@@ -59,6 +62,18 @@ export default function OrderPage() {
     for (const p of products) if (p.category && p.category !== 'أدوات منزلية') set.add(p.category);
     return [...set].sort((a, b) => a.localeCompare(b, 'ar'));
   }, [suppliers, products]);
+
+  // حفظ مسودة الطلب تلقائياً واسترجاعها لو النور قطع أو البرنامج اتقفل
+  useDraft(DRAFT_KEY, { rows, supplierName, supplierPhone, notes }, {
+    hasContent: (d) => d.rows?.some((r) => r.code || r.name) || d.supplierName,
+    onRestore: (d) => {
+      if (d.rows?.length) setRows(d.rows);
+      if (d.supplierName) setSupplierName(d.supplierName);
+      if (d.supplierPhone) setSupplierPhone(d.supplierPhone);
+      if (d.notes) setNotes(d.notes);
+      showToast('🔄 رجّعنا الطلب اللي كنت بتكتبه — كمّل من حيث وقفت');
+    },
+  });
 
   if (!settings) return null;
   const ar = settings.arabicDigits;
@@ -142,6 +157,7 @@ export default function OrderPage() {
     });
     setRows([emptyRow()]);
     setNotes('');
+    clearDraft(DRAFT_KEY); // اتحفظ رسمي — المسودة خلصت
     reload();
     if (thenPrint) {
       router.push(`/order/print/${o.id}`);
