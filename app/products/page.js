@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   listProducts,
   saveProduct,
@@ -43,10 +43,11 @@ export default function ProductsPage() {
   const [products, setProducts] = useState([]);
   const [settings, setSettings] = useState(null);
   const [form, setForm] = useState(empty);
-  const [q, setQ] = useState(() => {
+  const [qInput, setQInput] = useState(() => {
     if (typeof window === 'undefined') return '';
     return new URLSearchParams(window.location.search).get('q') || ''; // بحث سريع بيجيب هنا بالكود
   });
+  const [q, setQ] = useState(qInput); // النسخة المؤجّلة اللي بيتم البحث بيها (أسرع مع آلاف الأصناف)
   const [showImport, setShowImport] = useState(false);
   const [importText, setImportText] = useState('');
   const [msg, setMsg] = useState('');
@@ -157,18 +158,29 @@ export default function ProductsPage() {
   }
   useEffect(reload, []);
 
+  // بحث مؤجّل: مع آلاف الأصناف مابنعملش فلترة وإعادة رسم مع كل حرف — بنستنى ربع ثانية
+  useEffect(() => {
+    const t = setTimeout(() => { setQ(qInput); setShowCount(150); }, 250);
+    return () => clearTimeout(t);
+  }, [qInput]);
+
+  // الفلترة متحفوظة (memo) فمابتتكررش مع كل رسم للصفحة
+  const allFiltered = useMemo(
+    () => products.filter(
+      (p) =>
+        !q ||
+        p.name.includes(q) ||
+        String(p.code).includes(q) ||
+        String(p.barcode || '').includes(q) ||
+        String(p.category || '').includes(q) // البحث باسم المورد كمان
+    ),
+    [products, q]
+  );
+
   if (!settings) return null;
   const ar = settings.arabicDigits;
 
-  const allFiltered = products.filter(
-    (p) =>
-      !q ||
-      p.name.includes(q) ||
-      String(p.code).includes(q) ||
-      String(p.barcode || '').includes(q) ||
-      String(p.category || '').includes(q) // البحث باسم المورد كمان
-  );
-  // تخفيف وتسريع: مع آلاف الأصناف بنعرض أول شريحة بس والباقي بزرار "عرض المزيد"
+  // بنعرض أول شريحة بس والباقي بزرار "عرض المزيد"
   const filtered = allFiltered.slice(0, showCount);
 
   function submit(e) {
@@ -369,7 +381,7 @@ export default function ProductsPage() {
 
       <div className="card">
         <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-          <input style={{ maxWidth: 300 }} placeholder="🔍 بحث بالاسم أو الكود أو الباركود" value={q} onChange={(e) => { setQ(e.target.value); setShowCount(150); }} />
+          <input style={{ maxWidth: 300 }} placeholder="🔍 بحث بالاسم أو الكود أو الباركود" value={qInput} onChange={(e) => setQInput(e.target.value)} />
           <span className="muted">{num(allFiltered.length, ar)} صنف{allFiltered.length > filtered.length ? ` (معروض ${num(filtered.length, ar)})` : ''}</span>
           <span className="badge blue" title="اضغط ضغطتين على أي خانة في الجدول (الكود/الاسم/المورد/الأسعار/المخزون) عشان تعدلها على طول">✎ دوس مرتين على أي خانة تعدّلها</span>
           <div style={{ marginRight: 'auto', display: 'flex', gap: 8 }}>
