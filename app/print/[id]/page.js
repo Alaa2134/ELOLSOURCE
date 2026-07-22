@@ -15,6 +15,7 @@ export default function PrintPage() {
   const [invoice, setInvoice] = useState(null);
   const [settings, setSettings] = useState(null);
   const [qr, setQr] = useState('');
+  const [storeQr, setStoreQr] = useState('');
   const [paper, setPaper] = useState('a4');
   const [nav, setNav] = useState({ first: null, prev: null, next: null, last: null, pos: 0, total: 0 });
 
@@ -39,6 +40,12 @@ export default function PrintPage() {
       setPaper((inv.items || []).length <= SHORT_LIMIT ? 'a5' : 'a4');
       const link = invoiceLink(s, inv.id);
       if (link) QRCode.toDataURL(link, { margin: 0, width: 120 }).then(setQr).catch(() => {});
+      // QR ولينك المتجر — بيتطبع على الفاتورة عشان العميل يطلب أونلاين بسعره
+      if (s.store?.showOnInvoice !== false) {
+        const base = s.publicBaseUrl || (typeof window !== 'undefined' ? window.location.origin : '');
+        const storeLink = base ? base.replace(/\/$/, '') + '/store' : '';
+        if (storeLink) QRCode.toDataURL(storeLink, { margin: 0, width: 120 }).then(setStoreQr).catch(() => {});
+      }
     }
   }, [id]);
 
@@ -104,7 +111,12 @@ export default function PrintPage() {
         )}
         <button onClick={() => router.push('/pos')}>⬅ رجوع للبيع</button>
       </div>
-      <InvoiceDoc invoice={invoice} settings={settings} qrDataUrl={qr} paper={paper} />
+      <InvoiceDoc invoice={invoice} settings={settings} qrDataUrl={qr} paper={paper}
+        storeInfo={settings.store?.showOnInvoice !== false ? {
+          qr: storeQr,
+          link: (settings.publicBaseUrl || (typeof window !== 'undefined' ? window.location.origin : '')).replace(/\/$/, '') + '/store',
+          password: settings.store?.storePassword || '',
+        } : null} />
       {paper === 'a5' && (
         <div className="cut-line">- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -</div>
       )}

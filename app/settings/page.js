@@ -128,6 +128,24 @@ export default function SettingsPage() {
       </div>
 
       <div className="card">
+        <h3>🛒 متجر أونلاين وسعر المخزن</h3>
+        <div className="grid cols-2" style={{ gap: 12, alignItems: 'end' }}>
+          <label className="field">
+            <span>كلمة سر "سعر المخزن" في المتجر</span>
+            <input dir="ltr" value={s.store.storePassword} onChange={(e) => set({ store: { ...s.store, storePassword: e.target.value } })} placeholder="9988" />
+          </label>
+          <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
+            <input type="checkbox" style={{ width: 'auto' }} checked={s.store.showOnInvoice}
+              onChange={(e) => set({ store: { ...s.store, showOnInvoice: e.target.checked } })} />
+            اطبع QR ولينك المتجر وكلمة السر على الفاتورة
+          </label>
+        </div>
+        <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+          العميل اللي معاه كلمة السر دي، لما يكتبها في المتجر، الأسعار بتتحوّل تلقائياً لخانة "سعر المخزن" في الأصناف — نفس المنتجات بالظبط، الفرق بس مصدر السعر. (سيب كلمة السر فاضية لو مش عايز الميزة دي)
+        </p>
+      </div>
+
+      <div className="card">
         <h3>☁️ التخزين السحابي والمزامنة اللحظية</h3>
         <p style={{ marginBottom: 10 }}>
           {cloudEnabled()

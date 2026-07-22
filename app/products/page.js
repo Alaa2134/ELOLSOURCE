@@ -19,7 +19,7 @@ import { confirmBox, dangerBox, promptBox } from '@/lib/ui';
 
 const empty = {
   code: '', name: '', price: '', cost: '', stock: '', barcode: '', category: 'أدوات منزلية',
-  priceWholesale: '', priceDistributor: '', packName: '', packQty: '', packPrice: '', image: '',
+  priceWholesale: '', priceDistributor: '', priceStore: '', packName: '', packQty: '', packPrice: '', image: '',
 };
 
 // ضغط صورة الصنف لحجم صغير قبل التخزين
@@ -193,6 +193,7 @@ export default function ProductsPage() {
       stock: Number(form.stock) || 0,
       priceWholesale: Number(form.priceWholesale) || 0,
       priceDistributor: Number(form.priceDistributor) || 0,
+      priceStore: Number(form.priceStore) || 0,
       packQty: Number(form.packQty) || 0,
       packPrice: Number(form.packPrice) || 0,
     });
@@ -353,6 +354,8 @@ export default function ProductsPage() {
             <input type="number" step="any" value={form.priceWholesale} onChange={(e) => setForm({ ...form, priceWholesale: e.target.value })} /></label>
           <label className="field"><span>سعر الموزعين</span>
             <input type="number" step="any" value={form.priceDistributor} onChange={(e) => setForm({ ...form, priceDistributor: e.target.value })} /></label>
+          <label className="field"><span>سعر المخزن</span>
+            <input type="number" step="any" value={form.priceStore} onChange={(e) => setForm({ ...form, priceStore: e.target.value })} placeholder="سعر خاص بمتجر أونلاين" /></label>
           <label className="field"><span>اسم العبوة (كرتونة/دستة)</span>
             <input value={form.packName} onChange={(e) => setForm({ ...form, packName: e.target.value })} placeholder="كرتونة" /></label>
           <label className="field"><span>قطع في العبوة</span>

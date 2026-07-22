@@ -8,9 +8,6 @@ import {
 } from '@/lib/db';
 import { num, normalizePhone } from '@/lib/format';
 
-// سعر التاجر: الجملة لو متسجّلة، وإلا سعر البيع العادي
-const traderPrice = (p) => (Number(p.priceWholesale) > 0 ? Number(p.priceWholesale) : Number(p.price) || 0);
-
 export default function StorePage() {
   const [products, setProducts] = useState([]);
   const [settings, setSettings] = useState(null);
@@ -24,6 +21,7 @@ export default function StorePage() {
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(null); // رقم/تأكيد الطلب بعد الإرسال
   const [err, setErr] = useState('');
+  const [pass, setPass] = useState(() => (typeof window !== 'undefined' && localStorage.getItem('saqqa_store_pass')) || '');
 
   useEffect(() => {
     (async () => {
@@ -51,11 +49,20 @@ export default function StorePage() {
   const ar = settings.arabicDigits;
   const cur = settings.currency;
 
+  // مصدر السعر: لو معاه كلمة السر الصح، الأسعار تيجي من "سعر المخزن" — غير كده الجملة.
+  // (من غير ما نظهر أي مسميات للعميل)
+  const storePass = String(settings.store?.storePassword || '').trim();
+  const useStorePrice = storePass && pass.trim() === storePass;
+  const priceOf = (p) => {
+    if (useStorePrice) return Number(p.priceStore) > 0 ? Number(p.priceStore) : (Number(p.price) || 0);
+    return Number(p.priceWholesale) > 0 ? Number(p.priceWholesale) : (Number(p.price) || 0);
+  };
+
   const cartItems = Object.entries(cart)
     .filter(([, qty]) => qty > 0)
     .map(([code, qty]) => ({ p: products.find((x) => String(x.code) === code), qty }))
     .filter((x) => x.p);
-  const cartTotal = cartItems.reduce((s, x) => s + x.qty * traderPrice(x.p), 0);
+  const cartTotal = cartItems.reduce((s, x) => s + x.qty * priceOf(x.p), 0);
   const cartCount = cartItems.reduce((s, x) => s + x.qty, 0);
 
   const setQty = (code, v) => setCart((c) => ({ ...c, [code]: Math.max(0, Number(v) || 0) }));
@@ -63,7 +70,7 @@ export default function StorePage() {
 
   const shopPhone = normalizePhone((String(settings.phones || '').match(/01[0-9]{9}/) || [''])[0]);
   function waLink(orderNo) {
-    const lines = cartItems.map((x) => `• ${x.p.name} × ${x.qty} = ${num(x.qty * traderPrice(x.p))} ${cur}`);
+    const lines = cartItems.map((x) => `• ${x.p.name} × ${x.qty} = ${num(x.qty * priceOf(x.p))} ${cur}`);
     const msg = `🛒 طلب تاجر رقم ${orderNo || ''}\nالاسم: ${name}\nتليفون: ${phone}\n${notes ? 'ملاحظات: ' + notes + '\n' : ''}━━━━━━━━\n${lines.join('\n')}\n━━━━━━━━\nالإجمالي: ${num(cartTotal)} ${cur}`;
     return shopPhone ? `https://wa.me/${shopPhone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
   }
@@ -77,7 +84,7 @@ export default function StorePage() {
       const order = {
         trader: { name: name.trim(), phone: phone.trim() },
         notes: notes.trim(),
-        items: cartItems.map((x) => ({ code: x.p.code, name: x.p.name, qty: x.qty, price: traderPrice(x.p), total: x.qty * traderPrice(x.p) })),
+        items: cartItems.map((x) => ({ code: x.p.code, name: x.p.name, qty: x.qty, price: priceOf(x.p), total: x.qty * priceOf(x.p) })),
         total: cartTotal,
       };
       const saved = await submitStoreOrder(order);
@@ -107,13 +114,21 @@ export default function StorePage() {
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', paddingBottom: cartCount ? 90 : 20 }}>
       <div className="card" style={{ position: 'sticky', top: 0, zIndex: 5 }}>
-        <h2 style={{ color: 'var(--brand)', margin: 0 }}>🛒 متجر {settings.companyName} — أسعار الجملة للتجار</h2>
-        <input style={{ marginTop: 10 }} placeholder="🔍 دوّر على صنف بالاسم أو الكود..." value={q} onChange={(e) => { setQ(e.target.value); setShowCount(60); }} />
+        <h2 style={{ color: 'var(--brand)', margin: 0 }}>🛒 متجر {settings.companyName}</h2>
+        <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+          <input style={{ flex: 1, minWidth: 180 }} placeholder="🔍 دوّر على صنف بالاسم أو الكود..." value={q} onChange={(e) => { setQ(e.target.value); setShowCount(60); }} />
+          <input
+            style={{ width: 150 }} dir="ltr" placeholder="🔑 كود خاص (اختياري)"
+            value={pass}
+            onChange={(e) => { const v = e.target.value; setPass(v); try { localStorage.setItem('saqqa_store_pass', v); } catch {} }}
+          />
+        </div>
+        {useStorePrice && <span className="badge green" style={{ marginTop: 6, display: 'inline-block' }}>✅ الكود اشتغل — الأسعار اتحدّثت لك</span>}
       </div>
 
       <div className="store-grid">
         {filtered.map((p) => {
-          const price = traderPrice(p);
+          const price = priceOf(p);
           const inCart = Number(cart[p.code]) || 0;
           return (
             <div key={p.id} className="store-card">
@@ -150,7 +165,7 @@ export default function StorePage() {
               {cartItems.map((x) => (
                 <div key={x.p.code} className="store-cartrow">
                   <span>{x.p.name}</span>
-                  <span>{num(x.qty, ar)} × {num(traderPrice(x.p), ar)} = <b>{num(x.qty * traderPrice(x.p), ar)}</b></span>
+                  <span>{num(x.qty, ar)} × {num(priceOf(x.p), ar)} = <b>{num(x.qty * priceOf(x.p), ar)}</b></span>
                   <button className="btn-sm btn-red" onClick={() => setQty(x.p.code, 0)}>✕</button>
                 </div>
               ))}
