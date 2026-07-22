@@ -98,6 +98,25 @@ export default function PosPage() {
     const touch = (navigator.maxTouchPoints || 0) > 0;
     const mob = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
     setIsMobile(touch && mob);
+    // جايين من عرض سعر؟ نملأ الفاتورة بأصنافه وبيانات العميل
+    try {
+      const qId = new URLSearchParams(window.location.search).get('quote');
+      if (qId) {
+        const o = JSON.parse(sessionStorage.getItem('saqqa_quote_conv') || 'null');
+        if (o && o.id === qId) {
+          setRows([
+            ...(o.items || []).map((it) => ({ code: it.code || '', name: it.name, qty: it.qty, price: it.price, disc: 0, notes: '', unit: '' })),
+            emptyRow(),
+          ]);
+          setCustomerName(o.customer?.name || '');
+          setCustomerPhone(o.customer?.phone || '');
+          setNumber(nextInvoiceNumber());
+          sessionStorage.removeItem('saqqa_quote_conv');
+          showToast('📝 اتملت الفاتورة من عرض السعر — راجعها واحفظها');
+          return;
+        }
+      }
+    } catch {}
     // جايين من طلب متجر؟ نملأ الفاتورة بأصنافه وبيانات التاجر تلقائياً
     try {
       const soId = new URLSearchParams(window.location.search).get('storeOrder');

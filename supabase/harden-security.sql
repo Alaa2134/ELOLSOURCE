@@ -15,7 +15,7 @@ do $$
 declare t text;
 begin
   foreach t in array array['products','customers','invoices','payments','expenses',
-                           'suppliers','purchases','stocktakes','daycloses','audit','settings','store_orders']
+                           'suppliers','purchases','stocktakes','daycloses','audit','settings','store_orders','quotes']
   loop
     execute format('alter table %I enable row level security;', t);
     -- شيل السياسة القديمة اللي كانت بتسمح للكل (المفتاح العام)
@@ -29,7 +29,7 @@ end $$;
 -- للرجوع للوضع القديم (السماح للكل) لو احتجت — شغّل ده بدل اللي فوق:
 -- do $$ declare t text; begin
 --   foreach t in array array['products','customers','invoices','payments','expenses',
---                            'suppliers','purchases','stocktakes','daycloses','audit','settings','store_orders'] loop
+--                            'suppliers','purchases','stocktakes','daycloses','audit','settings','store_orders','quotes'] loop
 --     execute format('drop policy if exists "auth %s" on %I;', t, t);
 --     execute format('create policy "allow all %s" on %I for all using (true) with check (true);', t, t);
 --   end loop; end $$;
