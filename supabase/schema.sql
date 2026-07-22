@@ -73,6 +73,12 @@ create table if not exists store_orders (
   updated_at timestamptz default now()
 );
 
+create table if not exists quotes (
+  id text primary key,
+  data jsonb not null,
+  updated_at timestamptz default now()
+);
+
 -- تفعيل RLS (Row Level Security) على كل الجداول — طبقة حماية على السحابة
 -- ملاحظة أمان: النظام بيستخدم مفتاح anon مشترك عشان يشتغل أوف لاين ويتزامن ببساطة،
 --   فالسياسات بتسمح بالقراءة والكتابة بالمفتاح ده (زي أي نظام محل واحد).
@@ -128,6 +134,10 @@ alter table store_orders enable row level security;
 drop policy if exists "allow all store_orders" on store_orders;
 create policy "allow all store_orders" on store_orders for all using (true) with check (true);
 
+alter table quotes enable row level security;
+drop policy if exists "allow all quotes" on quotes;
+create policy "allow all quotes" on quotes for all using (true) with check (true);
+
 -- المزامنة اللحظية (Realtime): أي تعديل من جهاز بيوصل لباقي الأجهزة فوراً
 alter publication supabase_realtime add table products;
 alter publication supabase_realtime add table customers;
@@ -140,3 +150,4 @@ alter publication supabase_realtime add table stocktakes;
 alter publication supabase_realtime add table daycloses;
 alter publication supabase_realtime add table settings;
 alter publication supabase_realtime add table store_orders;
+alter publication supabase_realtime add table quotes;
