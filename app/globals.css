@@ -851,6 +851,14 @@ table.tbl tr:hover td { background: #fef3ec; }
 /* حقول الإدخال: انتقال أنعم عند التركيز */
 input, select, textarea { transition: border-color .15s, box-shadow .15s; }
 
+/* كشف الأرباح والخسائر */
+.pnl-table td { padding: 10px 14px; font-size: 15px; }
+.pnl-table .pnl-num { text-align: left; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pnl-table .pnl-sub td { border-top: 1px solid var(--line); font-weight: 700; }
+.pnl-table .pnl-total td { font-size: 17px; font-weight: 900; border-top: 2px solid var(--line); }
+.pnl-table .pnl-total.green td { color: var(--green); background: #eaf5ee; }
+.pnl-table .pnl-total.red td { color: var(--red); background: #fdeaea; }
+
 /* رسوم بيانية */
 .chart-bars { display: flex; align-items: flex-end; gap: 8px; padding-top: 24px; overflow-x: auto; }
 .chart-bars .bar-col { flex: 1; min-width: 34px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
