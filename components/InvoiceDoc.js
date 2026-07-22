@@ -148,7 +148,6 @@ export default function InvoiceDoc({ invoice, settings, qrDataUrl, storeInfo, pa
                       <div className="inv-store-txt">
                         <b>🛒 اطلب أونلاين من المتجر</b>
                         {storeInfo.link && <div dir="ltr" className="inv-store-link">{storeInfo.link}</div>}
-                        {storeInfo.password && <div>كلمة السر: <b>{storeInfo.password}</b></div>}
                       </div>
                     </div>
                   )}

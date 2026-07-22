@@ -115,7 +115,6 @@ export default function PrintPage() {
         storeInfo={settings.store?.showOnInvoice !== false ? {
           qr: storeQr,
           link: (settings.publicBaseUrl || (typeof window !== 'undefined' ? window.location.origin : '')).replace(/\/$/, '') + '/store',
-          password: settings.store?.storePassword || '',
         } : null} />
       {paper === 'a5' && (
         <div className="cut-line">- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -</div>

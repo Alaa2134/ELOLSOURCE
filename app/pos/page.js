@@ -229,11 +229,10 @@ export default function PosPage() {
     });
   }
 
-  // السعر حسب نوع العميل: قطاعي / جملة / موزع
+  // السعر حسب نوع العميل: نقدي = سعر البيع · تاجر جملة = السعر المبدائي
   function priceFor(p, name = customerName) {
     const c = customers.find((x) => x.name === name);
-    if (c?.priceType === 'جملة' && Number(p.priceWholesale) > 0) return p.priceWholesale;
-    if (c?.priceType === 'موزع' && Number(p.priceDistributor) > 0) return p.priceDistributor;
+    if (c?.priceType === 'تاجر جملة' && Number(p.cost) > 0) return p.cost;
     return p.price;
   }
 
@@ -330,7 +329,7 @@ export default function PosPage() {
     setCustomerName(name);
     const c = customers.find((x) => x.name === name);
     if (c && c.phone) setCustomerPhone(c.phone);
-    // إعادة تسعير الأصناف الموجودة حسب نوع سعر العميل (جملة/موزع)
+    // إعادة تسعير الأصناف الموجودة حسب نوع العميل (نقدي = سعر البيع · تاجر جملة = السعر المبدائي)
     if (c) {
       setRows((prev) =>
         prev.map((r) => {

@@ -21,7 +21,6 @@ export default function StorePage() {
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(null); // رقم/تأكيد الطلب بعد الإرسال
   const [err, setErr] = useState('');
-  const [pass, setPass] = useState(() => (typeof window !== 'undefined' && localStorage.getItem('saqqa_store_pass')) || '');
 
   useEffect(() => {
     (async () => {
@@ -49,14 +48,8 @@ export default function StorePage() {
   const ar = settings.arabicDigits;
   const cur = settings.currency;
 
-  // مصدر السعر: لو معاه كلمة السر الصح، الأسعار تيجي من "سعر المخزن" — غير كده الجملة.
-  // (من غير ما نظهر أي مسميات للعميل)
-  const storePass = String(settings.store?.storePassword || '').trim();
-  const useStorePrice = storePass && pass.trim() === storePass;
-  const priceOf = (p) => {
-    if (useStorePrice) return Number(p.priceStore) > 0 ? Number(p.priceStore) : (Number(p.price) || 0);
-    return Number(p.priceWholesale) > 0 ? Number(p.priceWholesale) : (Number(p.price) || 0);
-  };
+  // المتجر لتجار الجملة → السعر بالسعر المبدائي (وإلا سعر البيع لو مش متسجّل)
+  const priceOf = (p) => (Number(p.cost) > 0 ? Number(p.cost) : (Number(p.price) || 0));
 
   const cartItems = Object.entries(cart)
     .filter(([, qty]) => qty > 0)
@@ -114,16 +107,8 @@ export default function StorePage() {
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', paddingBottom: cartCount ? 90 : 20 }}>
       <div className="card" style={{ position: 'sticky', top: 0, zIndex: 5 }}>
-        <h2 style={{ color: 'var(--brand)', margin: 0 }}>🛒 متجر {settings.companyName}</h2>
-        <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-          <input style={{ flex: 1, minWidth: 180 }} placeholder="🔍 دوّر على صنف بالاسم أو الكود..." value={q} onChange={(e) => { setQ(e.target.value); setShowCount(60); }} />
-          <input
-            style={{ width: 150 }} dir="ltr" placeholder="🔑 كود خاص (اختياري)"
-            value={pass}
-            onChange={(e) => { const v = e.target.value; setPass(v); try { localStorage.setItem('saqqa_store_pass', v); } catch {} }}
-          />
-        </div>
-        {useStorePrice && <span className="badge green" style={{ marginTop: 6, display: 'inline-block' }}>✅ الكود اشتغل — الأسعار اتحدّثت لك</span>}
+        <h2 style={{ color: 'var(--brand)', margin: 0 }}>🛒 متجر {settings.companyName} — أسعار الجملة للتجار</h2>
+        <input style={{ marginTop: 10 }} placeholder="🔍 دوّر على صنف بالاسم أو الكود..." value={q} onChange={(e) => { setQ(e.target.value); setShowCount(60); }} />
       </div>
 
       <div className="store-grid">
