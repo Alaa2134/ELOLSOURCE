@@ -167,7 +167,7 @@ export default function CustomersPage() {
         <div style={{ overflowX: 'auto' }}>
           <table className="tbl">
             <thead>
-              <tr><th>الاسم</th><th>الهاتف</th><th>العنوان</th><th>الفواتير</th><th>إجمالي التعامل</th><th>مديونية</th><th>إجراءات</th></tr>
+              <tr><th>الاسم</th><th>النوع</th><th>الهاتف</th><th>العنوان</th><th>الفواتير</th><th>إجمالي التعامل</th><th>مديونية</th><th>إجراءات</th></tr>
             </thead>
             <tbody>
               {visibleCustomers.map((c) => {
@@ -175,6 +175,9 @@ export default function CustomersPage() {
                 return (
                   <tr key={c.id}>
                     <td><b>{c.name}</b></td>
+                    <td>{c.priceType === 'تاجر جملة'
+                      ? <span className="badge blue">تاجر جملة</span>
+                      : <span className="badge">نقدي</span>}</td>
                     <td dir="ltr">{c.phone || '—'}</td>
                     <td>{c.address || '—'}</td>
                     <td>{num(st.count, ar)}</td>

@@ -336,9 +336,9 @@ export default function ProductsPage() {
             <input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} /></label>
           <label className="field" style={{ gridColumn: 'span 2' }}><span>اسم الصنف</span>
             <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
-          <label className="field"><span>السعر المبدئي (التكلفة)</span>
+          <label className="field"><span>السعر المبدئي (لتاجر الجملة)</span>
             <input type="number" step="any" value={form.cost} onChange={(e) => setForm({ ...form, cost: e.target.value })} /></label>
-          <label className="field"><span>سعر البيع</span>
+          <label className="field"><span>سعر البيع (للعميل النقدي)</span>
             <input type="number" step="any" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} /></label>
           <label className="field"><span>المورد</span>
             <input list="suppliers-dl" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="اسم المورد..." />
@@ -349,10 +349,6 @@ export default function ProductsPage() {
             <input type="number" step="any" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} /></label>
           <label className="field"><span>باركود (اختياري)</span>
             <input value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} dir="ltr" /></label>
-          <label className="field"><span>سعر الجملة</span>
-            <input type="number" step="any" value={form.priceWholesale} onChange={(e) => setForm({ ...form, priceWholesale: e.target.value })} /></label>
-          <label className="field"><span>سعر الموزعين</span>
-            <input type="number" step="any" value={form.priceDistributor} onChange={(e) => setForm({ ...form, priceDistributor: e.target.value })} /></label>
           <label className="field"><span>اسم العبوة (كرتونة/دستة)</span>
             <input value={form.packName} onChange={(e) => setForm({ ...form, packName: e.target.value })} placeholder="كرتونة" /></label>
           <label className="field"><span>قطع في العبوة</span>
@@ -484,7 +480,7 @@ export default function ProductsPage() {
                     checked={allFiltered.length > 0 && selected.size === allFiltered.length}
                   />
                 </th>
-                <th></th><th>الكود</th><th>اسم الصنف</th><th>المورد</th><th>السعر المبدئي</th><th>جملة</th><th>سعر البيع</th><th>المخزون</th><th>إجراءات</th>
+                <th></th><th>الكود</th><th>اسم الصنف</th><th>المورد</th><th>السعر المبدئي (جملة)</th><th>سعر البيع (نقدي)</th><th>المخزون</th><th>إجراءات</th>
               </tr>
             </thead>
             <tbody>
@@ -509,8 +505,7 @@ export default function ProductsPage() {
                   <EditCell p={p} field="category" type="text">
                     {p.category && p.category !== 'أدوات منزلية' ? <span className="badge blue">{p.category}</span> : <span className="muted">—</span>}
                   </EditCell>
-                  <PriceCell p={p} field="cost" className="muted" />
-                  <PriceCell p={p} field="priceWholesale" />
+                  <PriceCell p={p} field="cost" />
                   <PriceCell p={p} field="price" />
                   <EditCell p={p} field="stock" type="num">
                     <span className={`badge ${(Number(p.stock) || 0) <= (settings.lowStock || 5) ? 'red' : 'green'}`}>
