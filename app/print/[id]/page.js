@@ -106,7 +106,7 @@ export default function PrintPage() {
       </div>
       <InvoiceDoc invoice={invoice} settings={settings} qrDataUrl={qr} paper={paper} />
       {paper === 'a5' && (
-        <div className="cut-line">✂ ‏- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - قص هنا</div>
+        <div className="cut-line">- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -</div>
       )}
     </div>
   );
