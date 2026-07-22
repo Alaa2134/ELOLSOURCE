@@ -282,7 +282,7 @@ export default function PurchasesPage() {
       <div className="card">
         <h3>🧾 أسماء الموردين — تعديل الاسم والهاتف ({num(allSuppliers.length, ar)})</h3>
         <p className="muted" style={{ marginTop: 0 }}>
-          دي كل أسماء الموردين اللي على أصنافك. عدّل الاسم أو الهاتف واضغط 💾 حفظ —
+          دي كل أسماء الموردين اللي على أصنافك. عدّل الاسم أو الهاتف والتعديل بيتحفظ لوحده —
           لو غيّرت الاسم، كل أصناف المورد بتتنقل للاسم الجديد تلقائياً.
         </p>
         <div style={{ maxHeight: 420, overflowY: 'auto' }}>
@@ -302,12 +302,11 @@ export default function PurchasesPage() {
               const debt = supplierDebt(s.name);
               return (
                 <tr key={s.id}>
-                  <td><input value={supVal(s, 'name')} onChange={(e) => editSup(s.id, { name: e.target.value })} /></td>
-                  <td><input dir="ltr" value={supVal(s, 'phone')} onChange={(e) => editSup(s.id, { phone: e.target.value })} placeholder="—" /></td>
+                  <td><input value={supVal(s, 'name')} onChange={(e) => editSup(s.id, { name: e.target.value })} onBlur={() => dirty && saveSupEdit(s)} /></td>
+                  <td><input dir="ltr" value={supVal(s, 'phone')} onChange={(e) => editSup(s.id, { phone: e.target.value })} onBlur={() => dirty && saveSupEdit(s)} placeholder="—" /></td>
                   <td>{s.count > 0 ? <span className="badge blue">{num(s.count, ar)}</span> : <span className="muted">—</span>}</td>
                   <td>{debt > 0 ? <span className="badge red">{num(debt, ar)}</span> : '—'}</td>
                   <td style={{ textAlign: 'center' }}>
-                    <button className="btn-sm btn-green" disabled={!dirty} onClick={() => saveSupEdit(s)}>💾 حفظ</button>{' '}
                     <button className="btn-sm btn-red" title={s.count > 0 ? 'مربوط بأصناف — مينفعش يتمسح' : 'حذف'} onClick={() => removeSup(s)}>🗑️</button>
                   </td>
                 </tr>

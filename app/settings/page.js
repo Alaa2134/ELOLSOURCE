@@ -55,14 +55,14 @@ export default function SettingsPage() {
     setTesting(false);
   }
 
+  // حفظ تلقائي: أي تعديل بيتخزن على طول من غير أزرار
   function set(patch) {
-    setS({ ...s, ...patch });
-  }
-
-  function save() {
-    saveSettings(s);
-    setMsg('✅ تم حفظ الإعدادات');
-    setTimeout(() => setMsg(''), 3000);
+    const next = { ...s, ...patch };
+    setS(next);
+    saveSettings(next);
+    setMsg('✅ اتحفظ');
+    clearTimeout(set._t);
+    set._t = setTimeout(() => setMsg(''), 1500);
   }
 
   function downloadBackup() {
@@ -148,10 +148,6 @@ export default function SettingsPage() {
           <button className="btn-accent" onClick={saveCloud} disabled={testing}>☁️ حفظ واختبار الاتصال</button>
           {sbMsg && <b style={{ fontSize: 13 }}>{sbMsg}</b>}
         </div>
-        <p className="muted" style={{ fontSize: 12, marginBottom: 12 }}>
-          💡 من supabase.com: اعمل مشروع ← شغّل ملف supabase/schema.sql في SQL Editor ← هات الـ URL والمفتاح من
-          Project Settings → API والصقهم هنا. ومش محتاج تعملها تاني على الموبايل — QR لوحة الأدمن بيظبطه تلقائياً.
-        </p>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <button className="btn-primary" onClick={downloadBackup}>📥 تحميل نسخة احتياطية</button>
           <button onClick={() => fileRef.current?.click()}>📤 استرجاع نسخة احتياطية</button>
@@ -164,10 +160,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-        <button className="btn-accent" onClick={save} style={{ fontSize: 16, padding: '10px 30px' }}>💾 حفظ كل الإعدادات</button>
-        {msg && <b>{msg}</b>}
-      </div>
+      {msg && <div className="save-flash">{msg}</div>}
     </div>
   );
 }
