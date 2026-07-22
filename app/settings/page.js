@@ -128,6 +128,18 @@ export default function SettingsPage() {
       </div>
 
       <div className="card">
+        <h3>🛒 متجر الجملة للتجار</h3>
+        <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
+          <input type="checkbox" style={{ width: 'auto' }} checked={s.store.showOnInvoice}
+            onChange={(e) => set({ store: { ...s.store, showOnInvoice: e.target.checked } })} />
+          اطبع QR ولينك المتجر على الفاتورة
+        </label>
+        <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+          المتجر لتجار الجملة — بيعرض الأصناف بالسعر المبدائي. شارك رابط المتجر (<code dir="ltr">{(s.publicBaseUrl || '') + '/store'}</code>) مع تجارك، أو خليهم يمسحوا الـ QR من الفاتورة.
+        </p>
+      </div>
+
+      <div className="card">
         <h3>☁️ التخزين السحابي والمزامنة اللحظية</h3>
         <p style={{ marginBottom: 10 }}>
           {cloudEnabled()

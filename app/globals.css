@@ -851,6 +851,12 @@ table.tbl tr:hover td { background: #fef3ec; }
 /* حقول الإدخال: انتقال أنعم عند التركيز */
 input, select, textarea { transition: border-color .15s, box-shadow .15s; }
 
+/* قسم المتجر أسفل الفاتورة (QR + لينك + كلمة سر) */
+.inv-store { display: flex; align-items: center; gap: 10px; border: 1px dashed #000; border-radius: 6px; padding: 6px 10px; margin-top: 6px; }
+.inv-store img { border: 1px solid #000; }
+.inv-store-txt { font-size: 12px; line-height: 1.6; }
+.inv-store-link { font-size: 11px; word-break: break-all; }
+
 /* متجر التجار أونلاين */
 .store-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-top: 14px; }
 .store-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 1px 3px rgba(20,41,66,.06); }

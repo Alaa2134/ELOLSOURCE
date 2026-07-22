@@ -7,7 +7,7 @@ import { num, fmtDate, fmtDateLong, fmtTime, toArabicDigits } from '@/lib/format
 const LOGO_SIZES = { 'صغير': 56, 'وسط': 84, 'كبير': 112 };
 const FONT_SIZES = { 'صغير': 12, 'وسط': 14, 'كبير': 16 };
 
-export default function InvoiceDoc({ invoice, settings, qrDataUrl, paper = 'a4' }) {
+export default function InvoiceDoc({ invoice, settings, qrDataUrl, storeInfo, paper = 'a4' }) {
   const ar = settings.arabicDigits;
   const opt = settings.invoice || {};
   const items = invoice.items || [];
@@ -142,6 +142,15 @@ export default function InvoiceDoc({ invoice, settings, qrDataUrl, paper = 'a4' 
                       <div style={{ marginTop: 4, fontWeight: 700, textAlign: 'center' }}>{opt.footerText}</div>
                     )}
                   </div>
+                  {storeInfo && (storeInfo.qr || storeInfo.link) && (
+                    <div className="inv-store">
+                      {storeInfo.qr && <img src={storeInfo.qr} alt="متجر" width={72} height={72} />}
+                      <div className="inv-store-txt">
+                        <b>🛒 اطلب أونلاين من المتجر</b>
+                        {storeInfo.link && <div dir="ltr" className="inv-store-link">{storeInfo.link}</div>}
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
 

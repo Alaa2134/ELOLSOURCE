@@ -6,7 +6,7 @@ import { waMeLink } from '@/lib/wa';
 import { parsePdfCustomers } from '@/lib/pdfImport';
 import { dangerBox } from '@/lib/ui';
 
-const empty = { name: '', phone: '', address: '', notes: '', creditLimit: '', priceType: 'قطاعي' };
+const empty = { name: '', phone: '', address: '', notes: '', creditLimit: '', priceType: 'نقدي' };
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState([]);
@@ -102,11 +102,10 @@ export default function CustomersPage() {
             <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} dir="ltr" placeholder="01xxxxxxxxx" /></label>
           <label className="field"><span>العنوان</span>
             <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></label>
-          <label className="field"><span>نوع السعر</span>
-            <select value={form.priceType || 'قطاعي'} onChange={(e) => setForm({ ...form, priceType: e.target.value })}>
-              <option value="قطاعي">عادي (سعر البيع)</option>
-              <option>جملة</option>
-              <option>موزع</option>
+          <label className="field"><span>نوع العميل</span>
+            <select value={form.priceType || 'نقدي'} onChange={(e) => setForm({ ...form, priceType: e.target.value })}>
+              <option value="نقدي">عميل نقدي (سعر البيع)</option>
+              <option value="تاجر جملة">تاجر جملة (السعر المبدائي)</option>
             </select></label>
           <label className="field"><span>حد الائتمان (أقصى مديونية — 0 = بدون حد)</span>
             <input type="number" min="0" step="any" value={form.creditLimit}

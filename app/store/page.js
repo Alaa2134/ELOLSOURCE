@@ -8,9 +8,6 @@ import {
 } from '@/lib/db';
 import { num, normalizePhone } from '@/lib/format';
 
-// سعر التاجر: الجملة لو متسجّلة، وإلا سعر البيع العادي
-const traderPrice = (p) => (Number(p.priceWholesale) > 0 ? Number(p.priceWholesale) : Number(p.price) || 0);
-
 export default function StorePage() {
   const [products, setProducts] = useState([]);
   const [settings, setSettings] = useState(null);
@@ -51,11 +48,14 @@ export default function StorePage() {
   const ar = settings.arabicDigits;
   const cur = settings.currency;
 
+  // المتجر لتجار الجملة → السعر بالسعر المبدائي (وإلا سعر البيع لو مش متسجّل)
+  const priceOf = (p) => (Number(p.cost) > 0 ? Number(p.cost) : (Number(p.price) || 0));
+
   const cartItems = Object.entries(cart)
     .filter(([, qty]) => qty > 0)
     .map(([code, qty]) => ({ p: products.find((x) => String(x.code) === code), qty }))
     .filter((x) => x.p);
-  const cartTotal = cartItems.reduce((s, x) => s + x.qty * traderPrice(x.p), 0);
+  const cartTotal = cartItems.reduce((s, x) => s + x.qty * priceOf(x.p), 0);
   const cartCount = cartItems.reduce((s, x) => s + x.qty, 0);
 
   const setQty = (code, v) => setCart((c) => ({ ...c, [code]: Math.max(0, Number(v) || 0) }));
@@ -63,7 +63,7 @@ export default function StorePage() {
 
   const shopPhone = normalizePhone((String(settings.phones || '').match(/01[0-9]{9}/) || [''])[0]);
   function waLink(orderNo) {
-    const lines = cartItems.map((x) => `• ${x.p.name} × ${x.qty} = ${num(x.qty * traderPrice(x.p))} ${cur}`);
+    const lines = cartItems.map((x) => `• ${x.p.name} × ${x.qty} = ${num(x.qty * priceOf(x.p))} ${cur}`);
     const msg = `🛒 طلب تاجر رقم ${orderNo || ''}\nالاسم: ${name}\nتليفون: ${phone}\n${notes ? 'ملاحظات: ' + notes + '\n' : ''}━━━━━━━━\n${lines.join('\n')}\n━━━━━━━━\nالإجمالي: ${num(cartTotal)} ${cur}`;
     return shopPhone ? `https://wa.me/${shopPhone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
   }
@@ -77,7 +77,7 @@ export default function StorePage() {
       const order = {
         trader: { name: name.trim(), phone: phone.trim() },
         notes: notes.trim(),
-        items: cartItems.map((x) => ({ code: x.p.code, name: x.p.name, qty: x.qty, price: traderPrice(x.p), total: x.qty * traderPrice(x.p) })),
+        items: cartItems.map((x) => ({ code: x.p.code, name: x.p.name, qty: x.qty, price: priceOf(x.p), total: x.qty * priceOf(x.p) })),
         total: cartTotal,
       };
       const saved = await submitStoreOrder(order);
@@ -113,7 +113,7 @@ export default function StorePage() {
 
       <div className="store-grid">
         {filtered.map((p) => {
-          const price = traderPrice(p);
+          const price = priceOf(p);
           const inCart = Number(cart[p.code]) || 0;
           return (
             <div key={p.id} className="store-card">
@@ -150,7 +150,7 @@ export default function StorePage() {
               {cartItems.map((x) => (
                 <div key={x.p.code} className="store-cartrow">
                   <span>{x.p.name}</span>
-                  <span>{num(x.qty, ar)} × {num(traderPrice(x.p), ar)} = <b>{num(x.qty * traderPrice(x.p), ar)}</b></span>
+                  <span>{num(x.qty, ar)} × {num(priceOf(x.p), ar)} = <b>{num(x.qty * priceOf(x.p), ar)}</b></span>
                   <button className="btn-sm btn-red" onClick={() => setQty(x.p.code, 0)}>✕</button>
                 </div>
               ))}
