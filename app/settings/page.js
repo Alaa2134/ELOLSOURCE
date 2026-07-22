@@ -135,7 +135,7 @@ export default function SettingsPage() {
           اطبع QR ولينك المتجر على الفاتورة
         </label>
         <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-          المتجر لتجار الجملة — بيعرض الأصناف بالسعر المبدائي. شارك رابط المتجر (<code dir="ltr">{(s.publicBaseUrl || '') + '/store'}</code>) مع تجارك، أو خليهم يمسحوا الـ QR من الفاتورة.
+          المتجر لتجار الجملة — بيعرض الأصناف بسعر البيع. شارك رابط المتجر (<code dir="ltr">{(s.publicBaseUrl || '') + '/store'}</code>) مع تجارك، أو خليهم يمسحوا الـ QR من الفاتورة.
         </p>
       </div>
 

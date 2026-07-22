@@ -104,8 +104,8 @@ export default function CustomersPage() {
             <input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></label>
           <label className="field"><span>نوع العميل</span>
             <select value={form.priceType || 'نقدي'} onChange={(e) => setForm({ ...form, priceType: e.target.value })}>
-              <option value="نقدي">عميل نقدي (سعر البيع)</option>
-              <option value="تاجر جملة">تاجر جملة (السعر المبدائي)</option>
+              <option value="نقدي">عميل نقدي (سعر النقدي)</option>
+              <option value="تاجر جملة">تاجر جملة (سعر البيع)</option>
             </select></label>
           <label className="field"><span>حد الائتمان (أقصى مديونية — 0 = بدون حد)</span>
             <input type="number" min="0" step="any" value={form.creditLimit}

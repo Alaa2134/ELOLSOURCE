@@ -48,8 +48,8 @@ export default function StorePage() {
   const ar = settings.arabicDigits;
   const cur = settings.currency;
 
-  // المتجر لتجار الجملة → السعر بالسعر المبدائي (وإلا سعر البيع لو مش متسجّل)
-  const priceOf = (p) => (Number(p.cost) > 0 ? Number(p.cost) : (Number(p.price) || 0));
+  // المتجر لتجار الجملة → سعر البيع
+  const priceOf = (p) => (Number(p.price) || 0);
 
   const cartItems = Object.entries(cart)
     .filter(([, qty]) => qty > 0)

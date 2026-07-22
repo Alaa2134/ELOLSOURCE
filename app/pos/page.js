@@ -229,11 +229,11 @@ export default function PosPage() {
     });
   }
 
-  // السعر حسب نوع العميل: نقدي = سعر البيع · تاجر جملة = السعر المبدائي
+  // السعر حسب نوع العميل: تاجر جملة = سعر البيع · نقدي = سعر النقدي (وإلا سعر البيع لو لسه مش متحدد)
   function priceFor(p, name = customerName) {
     const c = customers.find((x) => x.name === name);
-    if (c?.priceType === 'تاجر جملة' && Number(p.cost) > 0) return p.cost;
-    return p.price;
+    if (c?.priceType === 'تاجر جملة') return Number(p.price) || 0;
+    return Number(p.priceRetail) > 0 ? Number(p.priceRetail) : (Number(p.price) || 0);
   }
 
   // الحد الأدنى المسموح لبيع الصنف ده (حسب نوع العميل) — 0 يعني مفيش صنف/سعر
@@ -329,7 +329,7 @@ export default function PosPage() {
     setCustomerName(name);
     const c = customers.find((x) => x.name === name);
     if (c && c.phone) setCustomerPhone(c.phone);
-    // إعادة تسعير الأصناف الموجودة حسب نوع العميل (نقدي = سعر البيع · تاجر جملة = السعر المبدائي)
+    // إعادة تسعير الأصناف الموجودة حسب نوع العميل (تاجر جملة = سعر البيع · نقدي = سعر النقدي)
     if (c) {
       setRows((prev) =>
         prev.map((r) => {
