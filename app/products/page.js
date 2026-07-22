@@ -19,7 +19,7 @@ import { confirmBox, dangerBox, promptBox } from '@/lib/ui';
 
 const empty = {
   code: '', name: '', price: '', cost: '', stock: '', barcode: '', category: 'أدوات منزلية',
-  priceWholesale: '', priceDistributor: '', packName: '', packQty: '', packPrice: '', image: '',
+  priceWholesale: '', priceDistributor: '', priceRetail: '', packName: '', packQty: '', packPrice: '', image: '',
 };
 
 // ضغط صورة الصنف لحجم صغير قبل التخزين
@@ -119,7 +119,7 @@ export default function ProductsPage() {
   function PriceCell({ p, field, className }) {
     return (
       <EditCell p={p} field={field} type="num" className={className}>
-        {field === 'priceWholesale' && !(Number(p[field]) > 0)
+        {(field === 'priceWholesale' || field === 'priceRetail') && !(Number(p[field]) > 0)
           ? <span className="muted">—</span>
           : num(p[field] || 0, ar)}
       </EditCell>
@@ -193,6 +193,7 @@ export default function ProductsPage() {
       stock: Number(form.stock) || 0,
       priceWholesale: Number(form.priceWholesale) || 0,
       priceDistributor: Number(form.priceDistributor) || 0,
+      priceRetail: Number(form.priceRetail) || 0,
       packQty: Number(form.packQty) || 0,
       packPrice: Number(form.packPrice) || 0,
     });
@@ -336,10 +337,12 @@ export default function ProductsPage() {
             <input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} /></label>
           <label className="field" style={{ gridColumn: 'span 2' }}><span>اسم الصنف</span>
             <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
-          <label className="field"><span>السعر المبدئي (لتاجر الجملة)</span>
-            <input type="number" step="any" value={form.cost} onChange={(e) => setForm({ ...form, cost: e.target.value })} /></label>
-          <label className="field"><span>سعر البيع (للعميل النقدي)</span>
-            <input type="number" step="any" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} /></label>
+          <label className="field"><span>سعر الشراء (التكلفة)</span>
+            <input type="number" step="any" value={form.cost} onChange={(e) => setForm({ ...form, cost: e.target.value })} placeholder="اللي بتشتري بيه من المورد" /></label>
+          <label className="field"><span>سعر البيع (لتاجر الجملة)</span>
+            <input type="number" step="any" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="بيظهر في المتجر والاستعلام" /></label>
+          <label className="field"><span>سعر النقدي</span>
+            <input type="number" step="any" value={form.priceRetail} onChange={(e) => setForm({ ...form, priceRetail: e.target.value })} placeholder="للعميل النقدي (أعلى)" /></label>
           <label className="field"><span>المورد</span>
             <input list="suppliers-dl" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="اسم المورد..." />
             <datalist id="suppliers-dl">
@@ -480,7 +483,7 @@ export default function ProductsPage() {
                     checked={allFiltered.length > 0 && selected.size === allFiltered.length}
                   />
                 </th>
-                <th></th><th>الكود</th><th>اسم الصنف</th><th>المورد</th><th>السعر المبدئي (جملة)</th><th>سعر البيع (نقدي)</th><th>المخزون</th><th>إجراءات</th>
+                <th></th><th>الكود</th><th>اسم الصنف</th><th>المورد</th><th>سعر الشراء</th><th>سعر البيع (جملة)</th><th>سعر النقدي</th><th>المخزون</th><th>إجراءات</th>
               </tr>
             </thead>
             <tbody>
@@ -505,8 +508,9 @@ export default function ProductsPage() {
                   <EditCell p={p} field="category" type="text">
                     {p.category && p.category !== 'أدوات منزلية' ? <span className="badge blue">{p.category}</span> : <span className="muted">—</span>}
                   </EditCell>
-                  <PriceCell p={p} field="cost" />
+                  <PriceCell p={p} field="cost" className="muted" />
                   <PriceCell p={p} field="price" />
+                  <PriceCell p={p} field="priceRetail" />
                   <EditCell p={p} field="stock" type="num">
                     <span className={`badge ${(Number(p.stock) || 0) <= (settings.lowStock || 5) ? 'red' : 'green'}`}>
                       {num(p.stock || 0, ar)}

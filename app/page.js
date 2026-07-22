@@ -31,7 +31,7 @@ export default function Dashboard() {
 
     const lowStock = products.filter((p) => (Number(p.stock) || 0) <= (Number(s.lowStock) || 5));
 
-    // ربح النهارده (تقريبي حسب السعر المبدئي)
+    // ربح النهارده (تقريبي حسب سعر الشراء)
     const costByCode = Object.fromEntries(products.map((p) => [String(p.code), Number(p.cost) || 0]));
     let todayProfit = 0;
     // الأكتر مبيعاً النهارده (بالكمية)

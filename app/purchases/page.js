@@ -227,7 +227,7 @@ export default function PurchasesPage() {
               <th style={{ width: 90 }}>الكود</th>
               <th>اسم الصنف (لو جديد هيتضاف تلقائياً)</th>
               <th style={{ width: 80 }}>الكمية</th>
-              <th style={{ width: 100 }}>سعر الشراء (المبدئي)</th>
+              <th style={{ width: 100 }}>سعر الشراء</th>
               <th style={{ width: 100 }}>الإجمالي</th>
               <th style={{ width: 40 }}></th>
             </tr>

@@ -124,7 +124,7 @@ export default function ReportsPage() {
         </div>
         <div className="stat"><div className="label">عدد الفواتير</div><div className="value">{num(stats.count, ar)}</div></div>
         <div className="stat green"><div className="label">الربح التقريبي</div><div className="value">{num(stats.profit, ar)}</div>
-          <div className="sub">حسب السعر المبدئي</div></div>
+          <div className="sub">حسب سعر الشراء</div></div>
         <div className={`stat ${monthCompare.diff >= 0 ? 'green' : 'red'}`}>
           <div className="label">الشهر ده مقابل الشهر اللي فات</div>
           <div className="value">{monthCompare.diff >= 0 ? '▲' : '▼'} {num(Math.abs(monthCompare.diff), ar)}%</div>
