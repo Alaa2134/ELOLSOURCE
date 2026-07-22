@@ -851,6 +851,22 @@ table.tbl tr:hover td { background: #fef3ec; }
 /* حقول الإدخال: انتقال أنعم عند التركيز */
 input, select, textarea { transition: border-color .15s, box-shadow .15s; }
 
+/* متجر التجار أونلاين */
+.store-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-top: 14px; }
+.store-card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 1px 3px rgba(20,41,66,.06); }
+.store-img { width: 100%; height: 110px; object-fit: cover; border-radius: 8px; background: #f2f5f8; }
+.store-noimg { display: flex; align-items: center; justify-content: center; font-size: 40px; }
+.store-name { font-size: 13px; font-weight: 700; line-height: 1.4; height: 36px; overflow: hidden; }
+.store-price { color: var(--accent-dark); font-weight: 900; font-size: 17px; }
+.store-add { width: 100%; justify-content: center; }
+.store-qty { display: flex; align-items: center; gap: 4px; }
+.store-qty button { width: 34px; padding: 6px 0; justify-content: center; font-size: 18px; font-weight: 900; }
+.store-qty input { text-align: center; padding: 6px; }
+.store-cartbar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 2px solid var(--accent); padding: 12px 16px; box-shadow: 0 -4px 16px rgba(0,0,0,.1); z-index: 20; max-height: 70vh; overflow-y: auto; }
+.store-cartbar summary { cursor: pointer; font-size: 15px; list-style: none; }
+.store-cartbar summary::-webkit-details-marker { display: none; }
+.store-cartrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+
 /* كشف الأرباح والخسائر */
 .pnl-table td { padding: 10px 14px; font-size: 15px; }
 .pnl-table .pnl-num { text-align: left; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }

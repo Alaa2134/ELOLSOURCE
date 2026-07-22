@@ -31,6 +31,7 @@ const NAV = [
   { href: '/debts', label: '📕 متابعة الآجل', title: 'متابعة الآجل والمديونيات', roles: ['admin', 'accountant'] },
   { href: '/expenses', label: '💸 المصاريف اليومية', title: 'المصاريف اليومية', roles: ['admin', 'cashier', 'accountant'] },
   { href: '/invoices', label: '📁 الفواتير', title: 'الفواتير', roles: ['admin', 'cashier', 'accountant'] },
+  { href: '/store-orders', label: '📥 طلبات المتجر', title: 'طلبات التجار من المتجر أونلاين', roles: ['admin', 'cashier', 'accountant'] },
   { href: '/returns', label: '↩️ مرتجع بيع', title: 'مرتجع بيع', roles: ['admin', 'cashier'] },
   { href: '/purchases', label: '📥 المشتريات والموردين', title: 'المشتريات والموردين', roles: ['admin', 'accountant'] },
   { href: '/order', label: '📋 طلب بضاعة من مورد', title: 'طلب بضاعة من مورد', roles: ['admin', 'accountant'] },
@@ -80,7 +81,8 @@ export default function Shell({ children }) {
     pathname.startsWith('/order/print/') ||
     pathname === '/login' ||
     pathname === '/inquiry' ||
-    pathname === '/catalog';
+    pathname === '/catalog' ||
+    pathname === '/store';
 
   // فحص الصلاحيات فقط — خفيف، بيتنفذ مع كل تنقل
   useEffect(() => {
