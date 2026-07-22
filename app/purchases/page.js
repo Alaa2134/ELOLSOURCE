@@ -5,8 +5,11 @@ import {
   listProducts,
   findProduct,
   listSuppliers,
+  listAllSuppliers,
   saveSupplier,
   deleteSupplier,
+  renameSupplier,
+  setSupplierPhone as saveSupplierPhone,
   listPurchases,
   savePurchase,
   nextPurchaseNumber,
@@ -24,6 +27,7 @@ export default function PurchasesPage() {
   const [settings, setSettings] = useState(null);
   const [products, setProducts] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
+  const [allSuppliers, setAllSuppliers] = useState([]); // كل الموردين من الأصناف + جدول الموردين
   const [purchases, setPurchases] = useState([]);
   const [rows, setRows] = useState([emptyRow()]);
   const [supplierName, setSupplierName] = useState('');
@@ -38,6 +42,7 @@ export default function PurchasesPage() {
     setSettings(getSettings());
     setProducts(listProducts());
     setSuppliers(listSuppliers());
+    setAllSuppliers(listAllSuppliers());
     setPurchases(listPurchases());
   }
   useEffect(reload, []);
@@ -126,25 +131,36 @@ export default function PurchasesPage() {
     const name = (supVal(s, 'name') || '').trim();
     const phone = (supVal(s, 'phone') || '').trim();
     if (!name) { showToast('⚠️ اسم المورد مايصحش يبقى فاضي'); return; }
-    saveSupplier({ ...s, name, phone });
+    let moved = 0;
+    if (name !== s.name) {
+      // غيّرنا الاسم — بنحدّث كل أصناف المورد كمان
+      moved = renameSupplier(s.name, name, phone);
+    } else {
+      // الاسم زي ما هو — بنحدّث الهاتف بس
+      saveSupplierPhone(name, phone);
+    }
     setSupEdits((p) => { const n = { ...p }; delete n[s.id]; return n; });
     reload();
-    showToast(`✅ اتحفظ المورد: ${name}`);
+    showToast(moved ? `✅ اتحفظ المورد: ${name} — و${moved} صنف اتنقلوا للاسم الجديد` : `✅ اتحفظ المورد: ${name}`);
   }
   async function removeSup(s) {
+    if (s.count > 0) {
+      showToast(`⚠️ المورد "${s.name}" مربوط بـ ${num(s.count, ar)} صنف — غيّر مورد الأصناف الأول قبل ما تمسحه`);
+      return;
+    }
     const debt = supplierDebt(s.name);
     const msg = debt > 0
       ? `المورد "${s.name}" عليك له ${num(debt, ar)} ${settings.currency}. متأكد تمسحه من القايمة؟ (مش هيمسح فواتير الشراء)`
       : `تمسح المورد "${s.name}" من القايمة؟`;
     if (!(await dangerBox({ title: 'حذف مورد', message: msg }))) return;
-    deleteSupplier(s.id);
+    if (s.hasRecord) deleteSupplier(s.id);
     reload();
     showToast(`🗑️ اتمسح المورد: ${s.name}`);
   }
   function addSup() {
     const name = newSup.name.trim();
     if (!name) { showToast('⚠️ اكتب اسم المورد'); return; }
-    if (suppliers.some((s) => s.name === name)) { showToast('⚠️ المورد ده موجود بالفعل'); return; }
+    if (allSuppliers.some((s) => s.name === name)) { showToast('⚠️ المورد ده موجود بالفعل'); return; }
     saveSupplier({ name, phone: newSup.phone.trim() });
     setNewSup({ name: '', phone: '' });
     reload();
@@ -264,26 +280,35 @@ export default function PurchasesPage() {
       </div>
 
       <div className="card">
-        <h3>🧾 أسماء الموردين — تعديل الاسم والهاتف</h3>
+        <h3>🧾 أسماء الموردين — تعديل الاسم والهاتف ({num(allSuppliers.length, ar)})</h3>
         <p className="muted" style={{ marginTop: 0 }}>
-          كل مورد ليه اسم ورقم تليفون. عدّل في الخانة واضغط 💾 حفظ، أو امسح المورد من القايمة.
+          دي كل أسماء الموردين اللي على أصنافك. عدّل الاسم أو الهاتف واضغط 💾 حفظ —
+          لو غيّرت الاسم، كل أصناف المورد بتتنقل للاسم الجديد تلقائياً.
         </p>
+        <div style={{ maxHeight: 420, overflowY: 'auto' }}>
         <table className="tbl">
           <thead>
-            <tr><th style={{ width: '45%' }}>اسم المورد</th><th style={{ width: '30%' }}>الهاتف</th><th style={{ width: 90 }}>عليك له</th><th style={{ width: 150 }}></th></tr>
+            <tr>
+              <th style={{ width: '42%' }}>اسم المورد</th>
+              <th style={{ width: '26%' }}>الهاتف</th>
+              <th style={{ width: 70 }}>أصنافه</th>
+              <th style={{ width: 80 }}>عليك له</th>
+              <th style={{ width: 150 }}></th>
+            </tr>
           </thead>
           <tbody>
-            {suppliers.map((s) => {
+            {allSuppliers.map((s) => {
               const dirty = !!supEdits[s.id];
               const debt = supplierDebt(s.name);
               return (
                 <tr key={s.id}>
                   <td><input value={supVal(s, 'name')} onChange={(e) => editSup(s.id, { name: e.target.value })} /></td>
                   <td><input dir="ltr" value={supVal(s, 'phone')} onChange={(e) => editSup(s.id, { phone: e.target.value })} placeholder="—" /></td>
+                  <td>{s.count > 0 ? <span className="badge blue">{num(s.count, ar)}</span> : <span className="muted">—</span>}</td>
                   <td>{debt > 0 ? <span className="badge red">{num(debt, ar)}</span> : '—'}</td>
                   <td style={{ textAlign: 'center' }}>
                     <button className="btn-sm btn-green" disabled={!dirty} onClick={() => saveSupEdit(s)}>💾 حفظ</button>{' '}
-                    <button className="btn-sm btn-red" onClick={() => removeSup(s)}>🗑️</button>
+                    <button className="btn-sm btn-red" title={s.count > 0 ? 'مربوط بأصناف — مينفعش يتمسح' : 'حذف'} onClick={() => removeSup(s)}>🗑️</button>
                   </td>
                 </tr>
               );
@@ -292,11 +317,13 @@ export default function PurchasesPage() {
               <td><input value={newSup.name} onChange={(e) => setNewSup((p) => ({ ...p, name: e.target.value }))} placeholder="+ مورد جديد..." /></td>
               <td><input dir="ltr" value={newSup.phone} onChange={(e) => setNewSup((p) => ({ ...p, phone: e.target.value }))} placeholder="الهاتف" /></td>
               <td>—</td>
+              <td>—</td>
               <td style={{ textAlign: 'center' }}><button className="btn-sm btn-green" onClick={addSup}>➕ إضافة</button></td>
             </tr>
-            {!suppliers.length && <tr><td colSpan={4} className="muted">لا يوجد موردين بعد — أضف واحد أو احفظ فاتورة شراء</td></tr>}
+            {!allSuppliers.length && <tr><td colSpan={5} className="muted">لا يوجد موردين بعد — أضف واحد أو احفظ فاتورة شراء</td></tr>}
           </tbody>
         </table>
+        </div>
       </div>
 
       {toast && <div className="toast">{toast}</div>}
