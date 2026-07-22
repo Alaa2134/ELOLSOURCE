@@ -5,6 +5,8 @@ import {
   listProducts,
   findProduct,
   listSuppliers,
+  saveSupplier,
+  deleteSupplier,
   listPurchases,
   savePurchase,
   nextPurchaseNumber,
@@ -14,6 +16,7 @@ import {
   setOrderStatus,
 } from '@/lib/db';
 import { num, fmtDate, todayISO } from '@/lib/format';
+import { dangerBox } from '@/lib/ui';
 
 const emptyRow = () => ({ code: '', name: '', qty: 1, cost: '' });
 
@@ -28,6 +31,8 @@ export default function PurchasesPage() {
   const [paid, setPaid] = useState('');
   const [toast, setToast] = useState('');
   const [fromOrder, setFromOrder] = useState(null); // بنحوّل طلب بضاعة لفاتورة شراء
+  const [supEdits, setSupEdits] = useState({}); // تعديل اسم/هاتف المورد {id:{name,phone}}
+  const [newSup, setNewSup] = useState({ name: '', phone: '' }); // إضافة مورد جديد يدوي
 
   function reload() {
     setSettings(getSettings());
@@ -108,6 +113,42 @@ export default function PurchasesPage() {
     setPaid('');
     reload();
     showToast(`✅ تم حفظ فاتورة الشراء ${p.number} — المخزون والتكلفة اتحدثوا`);
+  }
+
+  // ---- إدارة الموردين: تعديل الاسم والهاتف ----
+  function supVal(s, field) {
+    return supEdits[s.id]?.[field] ?? s[field] ?? '';
+  }
+  function editSup(id, patch) {
+    setSupEdits((p) => ({ ...p, [id]: { ...p[id], ...patch } }));
+  }
+  function saveSupEdit(s) {
+    const name = (supVal(s, 'name') || '').trim();
+    const phone = (supVal(s, 'phone') || '').trim();
+    if (!name) { showToast('⚠️ اسم المورد مايصحش يبقى فاضي'); return; }
+    saveSupplier({ ...s, name, phone });
+    setSupEdits((p) => { const n = { ...p }; delete n[s.id]; return n; });
+    reload();
+    showToast(`✅ اتحفظ المورد: ${name}`);
+  }
+  async function removeSup(s) {
+    const debt = supplierDebt(s.name);
+    const msg = debt > 0
+      ? `المورد "${s.name}" عليك له ${num(debt, ar)} ${settings.currency}. متأكد تمسحه من القايمة؟ (مش هيمسح فواتير الشراء)`
+      : `تمسح المورد "${s.name}" من القايمة؟`;
+    if (!(await dangerBox({ title: 'حذف مورد', message: msg }))) return;
+    deleteSupplier(s.id);
+    reload();
+    showToast(`🗑️ اتمسح المورد: ${s.name}`);
+  }
+  function addSup() {
+    const name = newSup.name.trim();
+    if (!name) { showToast('⚠️ اكتب اسم المورد'); return; }
+    if (suppliers.some((s) => s.name === name)) { showToast('⚠️ المورد ده موجود بالفعل'); return; }
+    saveSupplier({ name, phone: newSup.phone.trim() });
+    setNewSup({ name: '', phone: '' });
+    reload();
+    showToast(`✅ اتضاف المورد: ${name}`);
   }
 
   // مديونياتنا للموردين
@@ -221,6 +262,43 @@ export default function PurchasesPage() {
           </table>
         </div>
       </div>
+
+      <div className="card">
+        <h3>🧾 أسماء الموردين — تعديل الاسم والهاتف</h3>
+        <p className="muted" style={{ marginTop: 0 }}>
+          كل مورد ليه اسم ورقم تليفون. عدّل في الخانة واضغط 💾 حفظ، أو امسح المورد من القايمة.
+        </p>
+        <table className="tbl">
+          <thead>
+            <tr><th style={{ width: '45%' }}>اسم المورد</th><th style={{ width: '30%' }}>الهاتف</th><th style={{ width: 90 }}>عليك له</th><th style={{ width: 150 }}></th></tr>
+          </thead>
+          <tbody>
+            {suppliers.map((s) => {
+              const dirty = !!supEdits[s.id];
+              const debt = supplierDebt(s.name);
+              return (
+                <tr key={s.id}>
+                  <td><input value={supVal(s, 'name')} onChange={(e) => editSup(s.id, { name: e.target.value })} /></td>
+                  <td><input dir="ltr" value={supVal(s, 'phone')} onChange={(e) => editSup(s.id, { phone: e.target.value })} placeholder="—" /></td>
+                  <td>{debt > 0 ? <span className="badge red">{num(debt, ar)}</span> : '—'}</td>
+                  <td style={{ textAlign: 'center' }}>
+                    <button className="btn-sm btn-green" disabled={!dirty} onClick={() => saveSupEdit(s)}>💾 حفظ</button>{' '}
+                    <button className="btn-sm btn-red" onClick={() => removeSup(s)}>🗑️</button>
+                  </td>
+                </tr>
+              );
+            })}
+            <tr>
+              <td><input value={newSup.name} onChange={(e) => setNewSup((p) => ({ ...p, name: e.target.value }))} placeholder="+ مورد جديد..." /></td>
+              <td><input dir="ltr" value={newSup.phone} onChange={(e) => setNewSup((p) => ({ ...p, phone: e.target.value }))} placeholder="الهاتف" /></td>
+              <td>—</td>
+              <td style={{ textAlign: 'center' }}><button className="btn-sm btn-green" onClick={addSup}>➕ إضافة</button></td>
+            </tr>
+            {!suppliers.length && <tr><td colSpan={4} className="muted">لا يوجد موردين بعد — أضف واحد أو احفظ فاتورة شراء</td></tr>}
+          </tbody>
+        </table>
+      </div>
+
       {toast && <div className="toast">{toast}</div>}
     </div>
   );

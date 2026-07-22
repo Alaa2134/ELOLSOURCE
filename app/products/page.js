@@ -60,29 +60,37 @@ export default function ProductsPage() {
   const [editVal, setEditVal] = useState('');
   const pdfRef = useRef(null);
 
-  // تعديل سريع: ضغطتين على خانة السعر بتفتحها للتعديل على طول
-  function startEdit(p, field) {
-    setEditCell({ id: p.id, field });
+  // تعديل سريع: ضغطتين على أي خانة بتفتحها للتعديل على طول (سعر أو نص أو مخزون)
+  function startEdit(p, field, type = 'num') {
+    setEditCell({ id: p.id, field, type });
     setEditVal(String(p[field] ?? ''));
   }
   function commitEdit(p) {
     if (!editCell) return;
-    const v = Number(editVal);
-    if (!Number.isNaN(v) && v !== Number(p[editCell.field] || 0)) {
-      saveProduct({ ...p, [editCell.field]: v });
-      reload();
+    const { field, type } = editCell;
+    if (type === 'text') {
+      const v = editVal.trim();
+      // الكود والاسم مايصحش يبقوا فاضيين
+      if ((field === 'code' || field === 'name') && !v) { setEditCell(null); return; }
+      if (v !== String(p[field] ?? '')) { saveProduct({ ...p, [field]: v }); reload(); }
+    } else {
+      const v = Number(editVal);
+      if (!Number.isNaN(v) && v !== Number(p[field] || 0)) { saveProduct({ ...p, [field]: v }); reload(); }
     }
     setEditCell(null);
   }
-  // خانة سعر قابلة للتعديل بالضغط المزدوج
-  function PriceCell({ p, field, className }) {
+  // خانة قابلة للتعديل بالضغط المزدوج — رقم أو نص
+  function EditCell({ p, field, type = 'num', className, inputStyle, children }) {
     const editing = editCell && editCell.id === p.id && editCell.field === field;
     if (editing) {
       return (
         <td>
           <input
-            className="num" type="number" step="any" autoFocus
-            style={{ width: 80 }}
+            className={type === 'num' ? 'num' : undefined}
+            type={type === 'num' ? 'number' : 'text'}
+            step={type === 'num' ? 'any' : undefined}
+            autoFocus
+            style={inputStyle || (type === 'num' ? { width: 80 } : { width: 160 })}
             value={editVal}
             onChange={(e) => setEditVal(e.target.value)}
             onBlur={() => commitEdit(p)}
@@ -99,13 +107,21 @@ export default function ProductsPage() {
         className={className}
         title="دوس مرتين للتعديل"
         style={{ cursor: 'pointer' }}
-        onDoubleClick={() => startEdit(p, field)}
+        onDoubleClick={() => startEdit(p, field, type)}
       >
+        {children}
+        <span className="edit-hint">✎</span>
+      </td>
+    );
+  }
+  // خانة سعر — نفس EditCell بس بتعرض السعر متنسّق (والجملة تبان — لو صفر)
+  function PriceCell({ p, field, className }) {
+    return (
+      <EditCell p={p} field={field} type="num" className={className}>
         {field === 'priceWholesale' && !(Number(p[field]) > 0)
           ? <span className="muted">—</span>
           : num(p[field] || 0, ar)}
-        <span className="edit-hint">✎</span>
-      </td>
+      </EditCell>
     );
   }
 
@@ -355,6 +371,7 @@ export default function ProductsPage() {
         <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           <input style={{ maxWidth: 300 }} placeholder="🔍 بحث بالاسم أو الكود أو الباركود" value={q} onChange={(e) => { setQ(e.target.value); setShowCount(150); }} />
           <span className="muted">{num(allFiltered.length, ar)} صنف{allFiltered.length > filtered.length ? ` (معروض ${num(filtered.length, ar)})` : ''}</span>
+          <span className="badge blue" title="اضغط ضغطتين على أي خانة في الجدول (الكود/الاسم/المورد/الأسعار/المخزون) عشان تعدلها على طول">✎ دوس مرتين على أي خانة تعدّلها</span>
           <div style={{ marginRight: 'auto', display: 'flex', gap: 8 }}>
             <button className="btn-accent" onClick={() => pdfRef.current?.click()} disabled={pdfBusy}>
               {pdfBusy ? '⏳ جاري التحليل...' : '📄 استيراد من PDF'}
@@ -473,17 +490,21 @@ export default function ProductsPage() {
                     />
                   </td>
                   <td>{p.image ? <img src={p.image} alt="" className="thumb" /> : <span className="muted">—</span>}</td>
-                  <td><b>{p.code}</b></td>
-                  <td>{p.name}{p.packQty > 0 ? <small className="muted"> ({p.packName || 'عبوة'} {p.packQty})</small> : ''}</td>
-                  <td>{p.category && p.category !== 'أدوات منزلية' ? <span className="badge blue">{p.category}</span> : <span className="muted">—</span>}</td>
+                  <EditCell p={p} field="code" type="text" inputStyle={{ width: 80 }}><b>{p.code}</b></EditCell>
+                  <EditCell p={p} field="name" type="text" inputStyle={{ width: 220 }}>
+                    {p.name}{p.packQty > 0 ? <small className="muted"> ({p.packName || 'عبوة'} {p.packQty})</small> : ''}
+                  </EditCell>
+                  <EditCell p={p} field="category" type="text">
+                    {p.category && p.category !== 'أدوات منزلية' ? <span className="badge blue">{p.category}</span> : <span className="muted">—</span>}
+                  </EditCell>
                   <PriceCell p={p} field="cost" className="muted" />
                   <PriceCell p={p} field="priceWholesale" />
                   <PriceCell p={p} field="price" />
-                  <td>
+                  <EditCell p={p} field="stock" type="num">
                     <span className={`badge ${(Number(p.stock) || 0) <= (settings.lowStock || 5) ? 'red' : 'green'}`}>
                       {num(p.stock || 0, ar)}
                     </span>
-                  </td>
+                  </EditCell>
                   <td style={{ display: 'flex', gap: 6 }}>
                     <button className="btn-sm" title="حركة الصنف (بيع وشراء)" onClick={() => setHistProduct(p)}>📊</button>
                     <button className="btn-sm btn-primary" onClick={() => setForm({ ...empty, ...p })}>✏️</button>
