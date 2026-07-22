@@ -15,6 +15,7 @@ import {
   getSupabase,
   runDailyBackup,
   ensureFullPush,
+  fetchStoreOrders,
 } from '@/lib/db';
 import { fmtDate } from '@/lib/format';
 import { maybeSendDailyReport, maybeSendDebtReminders } from '@/lib/wa';
@@ -73,6 +74,8 @@ export default function Shell({ children }) {
   const [printerName, setPrinterName] = useState('');
   const [invQ, setInvQ] = useState(''); // بحث سريع برقم الفاتورة
   const [lowCount, setLowCount] = useState(0); // عدد الأصناف الناقصة (بادج القايمة)
+  const [storeNew, setStoreNew] = useState(0); // عدد طلبات المتجر الجديدة (بادج + صوت)
+  const prevStoreNew = useRef(-1);
   const lastBeat = useRef(Date.now());
 
   const bare =
@@ -110,6 +113,37 @@ export default function Shell({ children }) {
     setReady(true);
   }, [pathname, bare, router]);
 
+  // صوت تنبيه قصير لطلب متجر جديد
+  function orderBeep() {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      const ctx = new AC();
+      [880, 1180].forEach((f, i) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.frequency.value = f; o.type = 'sine';
+        o.connect(g); g.connect(ctx.destination);
+        const t0 = ctx.currentTime + i * 0.18;
+        g.gain.setValueAtTime(0.001, t0);
+        g.gain.exponentialRampToValueAtTime(0.25, t0 + 0.03);
+        g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.16);
+        o.start(t0); o.stop(t0 + 0.17);
+      });
+    } catch {}
+  }
+
+  // متابعة طلبات المتجر الجديدة: بادج + صوت لما يجي طلب جديد
+  async function refreshStoreOrders() {
+    if (!cloudEnabled()) return;
+    try {
+      const orders = await fetchStoreOrders();
+      const nw = orders.filter((o) => !o.status || o.status === 'جديد').length;
+      setStoreNew(nw);
+      if (prevStoreNew.current >= 0 && nw > prevStoreNew.current) orderBeep(); // طلب جديد وصل
+      prevStoreNew.current = nw;
+    } catch {}
+  }
+
   // التهيئة الثقيلة (تحميل الأصناف + المزامنة) مرة واحدة بس عند فتح البرنامج — مش مع كل تنقل
   useEffect(() => {
     if (bare) return;
@@ -119,6 +153,7 @@ export default function Shell({ children }) {
       ensureFullPush();
     })();
     runDailyBackup();
+    refreshStoreOrders();
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
@@ -127,6 +162,7 @@ export default function Shell({ children }) {
       syncPull(); // مزامنة دورية احتياطية (الأساسي هو Realtime)
       maybeSendDailyReport();
       maybeSendDebtReminders();
+      refreshStoreOrders();
     }, 90000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -170,9 +206,10 @@ export default function Shell({ children }) {
     let timer = null;
     const ch = sb
       .channel('saqqa-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
         clearTimeout(timer);
         timer = setTimeout(() => syncPull(), 4000);
+        if (payload?.table === 'store_orders') refreshStoreOrders(); // طلب متجر جديد → بادج + صوت فوراً
       })
       .subscribe();
     return () => {
@@ -270,6 +307,9 @@ export default function Shell({ children }) {
               <span>{n.label}</span>
               {n.href === '/lowstock' && lowCount > 0 && (
                 <span className="nav-badge">{lowCount}</span>
+              )}
+              {n.href === '/store-orders' && storeNew > 0 && (
+                <span className="nav-badge">{storeNew}</span>
               )}
             </Link>
           ))}

@@ -8,6 +8,7 @@ import {
   cleanProductName,
   nameMatchKey,
   bulkImportProducts,
+  bulkSetRetailPrice,
   deleteProductsBulk,
   getRole,
   listInvoices,
@@ -202,6 +203,22 @@ export default function ProductsPage() {
     reload();
   }
 
+  // تعبئة سعر النقدي بالجملة = سعر البيع + نسبة%
+  async function fillRetailPrices() {
+    const pct = await promptBox({ title: 'تعبئة سعر النقدي تلقائياً', icon: '🏷️', message: 'سعر النقدي = سعر البيع + كام %؟ (مثلاً 15)', default: '15', placeholder: '15' });
+    if (pct === null) return;
+    const n = Number(pct);
+    if (Number.isNaN(n)) { setMsg('⚠️ اكتب رقم صحيح'); return; }
+    const all = await confirmBox({
+      title: 'على أنهي أصناف؟', icon: '❓',
+      message: `هطبّق "سعر البيع + ${n}%" على الأصناف اللي سعرها النقدي فاضي بس.\nتحب أطبّقه على كل الأصناف (وأستبدل الموجود)؟`,
+      confirmText: 'على الكل', cancelText: 'الفاضي بس',
+    });
+    const changed = bulkSetRetailPrice(n, all ? 'all' : 'empty');
+    setMsg(`✅ اتحسب سعر النقدي لـ ${num(changed, ar)} صنف (سعر البيع + ${n}%)`);
+    reload();
+  }
+
   async function onImage(e) {
     const f = e.target.files?.[0];
     e.target.value = '';
@@ -390,6 +407,7 @@ export default function ProductsPage() {
             <input ref={pdfRef} type="file" accept=".pdf" hidden onChange={onPdfFile} />
             <button onClick={() => setShowImport(!showImport)}>📥 استيراد من إكسل</button>
             <button onClick={exportCsv}>📤 تصدير CSV</button>
+            <button title="سعر النقدي = سعر البيع + نسبة تحددها" onClick={fillRetailPrices}>🏷️ تعبئة سعر النقدي</button>
             <button title="تحديد كل نتايج البحث الحالية" onClick={() => toggleSelectAll(allFiltered)}>
               {selected.size === allFiltered.length && allFiltered.length ? '⬜ إلغاء التحديد' : '☑️ تحديد الكل'}
             </button>
