@@ -2,7 +2,7 @@
 // لوحة "اليوم" — نظرة واحدة على حالة المحل: مبيعات، محصّل، آجل، فلوس المندوبين، النواقص، الأكتر مبيعاً
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { listInvoices, listProducts, listCustomers, listPayments, getSettings } from '@/lib/db';
+import { listInvoices, listProducts, listCustomers, listPayments, listExpenses, getSettings } from '@/lib/db';
 import { num, fmtTime } from '@/lib/format';
 
 export default function Dashboard() {
@@ -31,11 +31,16 @@ export default function Dashboard() {
 
     const lowStock = products.filter((p) => (Number(p.stock) || 0) <= (Number(s.lowStock) || 5));
 
+    // ربح النهارده (تقريبي حسب السعر المبدئي)
+    const costByCode = Object.fromEntries(products.map((p) => [String(p.code), Number(p.cost) || 0]));
+    let todayProfit = 0;
     // الأكتر مبيعاً النهارده (بالكمية)
     const byItem = {};
     for (const inv of todayInv) {
-      if (inv.type === 'مرتجع') continue;
+      const sign = inv.type === 'مرتجع' ? -1 : 1;
       for (const it of inv.items || []) {
+        todayProfit += sign * ((Number(it.price) || 0) - (costByCode[String(it.code)] || 0)) * (Number(it.qty) || 0);
+        if (sign < 0) continue;
         const k = it.name || it.code;
         byItem[k] = byItem[k] || { name: it.name, qty: 0, total: 0 };
         byItem[k].qty += Number(it.qty) || 0;
@@ -43,20 +48,57 @@ export default function Dashboard() {
       }
     }
     const topItems = Object.values(byItem).sort((a, b) => b.qty - a.qty).slice(0, 6);
+    const todayExpenses = listExpenses()
+      .filter((x) => new Date(x.date).toDateString() === today)
+      .reduce((sum, x) => sum + (Number(x.amount) || 0), 0);
+    const newDebtToday = todayInv.reduce((sum, i) => sum + (i.type === 'مرتجع' ? 0 : Math.max(0, i.totals?.remaining || 0)), 0);
 
-    setData({ s, invoices, todayInv, todaySales, todayCash, collectedToday, debt, repMoney, lowStock, topItems, customers: listCustomers().length });
+    setData({ s, invoices, todayInv, todaySales, todayCash, collectedToday, debt, repMoney, lowStock, topItems, todayProfit, todayExpenses, newDebtToday, customers: listCustomers().length });
   }, []);
 
   if (!data) return null;
-  const { s, invoices, todayInv, todaySales, todayCash, collectedToday, debt, repMoney, lowStock, topItems } = data;
+  const { s, invoices, todayInv, todaySales, todayCash, collectedToday, debt, repMoney, lowStock, topItems, todayProfit, todayExpenses, newDebtToday } = data;
   const ar = s.arabicDigits;
   const money = (v) => `${num(v, ar)} ${s.currency}`;
 
+  // ملخص اليوم لصاحب المحل — نص جاهز للواتساب
+  function dailySummaryText() {
+    const d = new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const cur = s.currency;
+    const lines = [
+      `📊 ملخص يوم ${d}`,
+      `— ${s.companyName || 'المحل'} —`,
+      ``,
+      `🧾 المبيعات: ${num(todaySales)} ${cur} (${num(todayInv.length)} فاتورة)`,
+      `💵 نقدي محصّل: ${num(todayCash)} ${cur}`,
+      `💰 تحصيل آجل (سندات): ${num(collectedToday)} ${cur}`,
+      `📈 الربح التقريبي: ${num(Math.round(todayProfit))} ${cur}`,
+      `💸 المصروفات: ${num(todayExpenses)} ${cur}`,
+      `📕 آجل جديد النهارده: ${num(newDebtToday)} ${cur}`,
+      `📉 أصناف قاربت تخلص: ${num(lowStock.length)}`,
+    ];
+    if (topItems.length) lines.push(``, `🏆 الأكتر مبيعاً: ${topItems.slice(0, 3).map((t) => t.name).join('، ')}`);
+    return lines.join('\n');
+  }
+
   return (
     <div>
-      <h2 style={{ color: 'var(--brand)', marginBottom: 12 }}>👋 أهلاً — ده ملخّص اليوم</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+        <h2 style={{ color: 'var(--brand)', margin: 0 }}>👋 أهلاً — ده ملخّص اليوم</h2>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <a className="btn btn-green" target="_blank" rel="noreferrer" href={`https://wa.me/?text=${encodeURIComponent(dailySummaryText())}`} title="ابعت ملخص اليوم على واتساب لنفسك أو للإدارة">
+            📤 ملخص اليوم واتساب
+          </a>
+          <button title="نسخ الملخص" onClick={() => { navigator.clipboard?.writeText(dailySummaryText()); }}>📋</button>
+        </div>
+      </div>
 
       <div className="grid cols-4" style={{ marginBottom: 8 }}>
+        <div className="stat green" style={{ borderTopColor: 'var(--gold)' }}>
+          <div className="label">📈 ربح النهارده (تقريبي)</div>
+          <div className="value">{num(Math.round(todayProfit), ar)} <small style={{ fontSize: 14 }}>{s.currency}</small></div>
+          <div className="sub">مصروفات النهارده {money(todayExpenses)}</div>
+        </div>
         <div className="stat orange">
           <div className="label">🧾 مبيعات النهارده</div>
           <div className="value">{num(todaySales, ar)} <small style={{ fontSize: 14 }}>{s.currency}</small></div>

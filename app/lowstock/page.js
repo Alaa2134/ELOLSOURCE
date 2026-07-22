@@ -2,19 +2,40 @@
 // النواقص: الأصناف اللي مخزونها قرب يخلص — مجمّعة بالمورد، وبضغطة تحوّلها طلب بضاعة
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { listProducts, getSettings } from '@/lib/db';
+import { listProducts, listInvoices, getSettings } from '@/lib/db';
 import { num } from '@/lib/format';
 
 export default function LowStockPage() {
   const router = useRouter();
   const [settings, setSettings] = useState(null);
   const [products, setProducts] = useState([]);
+  const [invoices, setInvoices] = useState([]);
   const [q, setQ] = useState('');
 
   useEffect(() => {
     setSettings(getSettings());
     setProducts(listProducts());
+    setInvoices(listInvoices());
   }, []);
+
+  // توقّع النفاد: سرعة البيع آخر ٣٠ يوم — الأصناف اللي هتخلص خلال أسبوع حتى لو لسه مخزونها فوق الحد
+  const soonOut = useMemo(() => {
+    const since = Date.now() - 30 * 86400000;
+    const sold = {};
+    for (const inv of invoices) {
+      if (inv.type === 'مرتجع' || new Date(inv.date).getTime() < since) continue;
+      for (const it of inv.items || []) sold[String(it.code)] = (sold[String(it.code)] || 0) + (Number(it.qty) || 0);
+    }
+    return products
+      .map((p) => {
+        const perDay = (sold[String(p.code)] || 0) / 30;
+        const stock = Number(p.stock) || 0;
+        return { ...p, perDay, daysLeft: perDay > 0 ? stock / perDay : Infinity };
+      })
+      .filter((p) => p.perDay > 0 && (Number(p.stock) || 0) > 0 && p.daysLeft <= 7)
+      .sort((a, b) => a.daysLeft - b.daysLeft)
+      .slice(0, 20);
+  }, [products, invoices]);
 
   const limit = Number(settings?.lowStock) || 5;
   const low = useMemo(
@@ -59,6 +80,27 @@ export default function LowStockPage() {
           <div className="sub">اطلب النواقص بضغطة</div>
         </div>
       </div>
+
+      {soonOut.length > 0 && (
+        <div className="card" style={{ borderRight: '4px solid var(--accent)' }}>
+          <h3>⏳ هتخلص قريب — حسب سرعة البيع آخر شهر</h3>
+          <p className="muted" style={{ marginTop: 0 }}>أصناف لسه مخزونها فوق الحد بس بتتباع بسرعة وهتنفد خلال أسبوع — الأفضل تطلبها بدري.</p>
+          <table className="tbl">
+            <thead><tr><th>الصنف</th><th>المورد</th><th>المخزون</th><th>بيع/يوم</th><th>هيكفي</th></tr></thead>
+            <tbody>
+              {soonOut.map((p) => (
+                <tr key={p.id}>
+                  <td>{p.name}</td>
+                  <td>{p.category && p.category !== 'أدوات منزلية' ? p.category : '—'}</td>
+                  <td><span className="badge orange">{num(p.stock, ar)}</span></td>
+                  <td>{num(Math.round(p.perDay * 10) / 10, ar)}</td>
+                  <td><span className={`badge ${p.daysLeft <= 3 ? 'red' : 'orange'}`}>{num(Math.ceil(p.daysLeft), ar)} يوم</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       <div className="card">
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 10, flexWrap: 'wrap' }}>
