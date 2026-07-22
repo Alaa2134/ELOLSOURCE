@@ -129,11 +129,16 @@ export default function SettingsPage() {
 
       <div className="card">
         <h3>🛒 متجر الجملة للتجار</h3>
-        <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
-          <input type="checkbox" style={{ width: 'auto' }} checked={s.store.showOnInvoice}
-            onChange={(e) => set({ store: { ...s.store, showOnInvoice: e.target.checked } })} />
-          اطبع QR ولينك المتجر على الفاتورة
-        </label>
+        <div className="grid cols-2" style={{ gap: 12, alignItems: 'center' }}>
+          <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
+            <input type="checkbox" style={{ width: 'auto' }} checked={s.store.showOnInvoice}
+              onChange={(e) => set({ store: { ...s.store, showOnInvoice: e.target.checked } })} />
+            اطبع QR ولينك المتجر على الفاتورة
+          </label>
+          <label className="field"><span>أقل قيمة للطلب من المتجر (0 = بدون حد)</span>
+            <input type="number" min="0" step="any" value={s.store.minOrder}
+              onChange={(e) => set({ store: { ...s.store, minOrder: Number(e.target.value) || 0 } })} /></label>
+        </div>
         <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
           المتجر لتجار الجملة — بيعرض الأصناف بسعر البيع. شارك رابط المتجر (<code dir="ltr">{(s.publicBaseUrl || '') + '/store'}</code>) مع تجارك، أو خليهم يمسحوا الـ QR من الفاتورة.
         </p>

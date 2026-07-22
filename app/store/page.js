@@ -12,6 +12,7 @@ export default function StorePage() {
   const [products, setProducts] = useState([]);
   const [settings, setSettings] = useState(null);
   const [q, setQ] = useState('');
+  const [catFilter, setCatFilter] = useState(''); // فلتر بالمورد/التصنيف
   const [cart, setCart] = useState({}); // code -> qty
   const [showCount, setShowCount] = useState(60);
   const [loading, setLoading] = useState(true);
@@ -37,16 +38,21 @@ export default function StorePage() {
     })();
   }, []);
 
+  // كل التصنيفات/الموردين الموجودين (للفلتر)
+  const cats = useMemo(() => [...new Set(products.map((p) => p.category).filter((c) => c && c !== 'أدوات منزلية'))].sort((a, b) => a.localeCompare(b, 'ar')), [products]);
   const allFiltered = useMemo(() => {
-    if (!q.trim()) return products;
     const s = q.trim();
-    return products.filter((p) => p.name.includes(s) || String(p.code).includes(s) || String(p.category || '').includes(s));
-  }, [q, products]);
+    return products.filter((p) =>
+      (!catFilter || p.category === catFilter) &&
+      (!s || p.name.includes(s) || String(p.code).includes(s) || String(p.category || '').includes(s))
+    );
+  }, [q, catFilter, products]);
   const filtered = allFiltered.slice(0, showCount);
 
   if (loading) return <p style={{ padding: 40, textAlign: 'center' }}>جاري تحميل المتجر...</p>;
   const ar = settings.arabicDigits;
   const cur = settings.currency;
+  const minOrder = Number(settings.store?.minOrder) || 0;
 
   // المتجر لتجار الجملة → سعر البيع
   const priceOf = (p) => (Number(p.price) || 0);
@@ -71,6 +77,7 @@ export default function StorePage() {
   async function send() {
     setErr('');
     if (!cartItems.length) { setErr('اختار أصناف الأول'); return; }
+    if (minOrder > 0 && cartTotal < minOrder) { setErr(`أقل قيمة للطلب ${num(minOrder)} ${cur} — ناقص ${num(minOrder - cartTotal)} ${cur}`); return; }
     if (!name.trim() || !phone.trim()) { setErr('اكتب اسمك ورقم تليفونك'); return; }
     setSending(true);
     try {
@@ -108,7 +115,16 @@ export default function StorePage() {
     <div style={{ maxWidth: 1100, margin: '0 auto', paddingBottom: cartCount ? 90 : 20 }}>
       <div className="card" style={{ position: 'sticky', top: 0, zIndex: 5 }}>
         <h2 style={{ color: 'var(--brand)', margin: 0 }}>🛒 متجر {settings.companyName} — أسعار الجملة للتجار</h2>
-        <input style={{ marginTop: 10 }} placeholder="🔍 دوّر على صنف بالاسم أو الكود..." value={q} onChange={(e) => { setQ(e.target.value); setShowCount(60); }} />
+        <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+          <input style={{ flex: 1, minWidth: 180 }} placeholder="🔍 دوّر على صنف بالاسم أو الكود..." value={q} onChange={(e) => { setQ(e.target.value); setShowCount(60); }} />
+          {cats.length > 0 && (
+            <select style={{ width: 180 }} value={catFilter} onChange={(e) => { setCatFilter(e.target.value); setShowCount(60); }}>
+              <option value="">كل الموردين</option>
+              {cats.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          )}
+        </div>
+        {minOrder > 0 && <p className="muted" style={{ marginTop: 6, fontSize: 13 }}>💡 أقل قيمة للطلب: <b>{num(minOrder, ar)} {cur}</b></p>}
       </div>
 
       <div className="store-grid">
@@ -159,9 +175,12 @@ export default function StorePage() {
                 <input dir="ltr" placeholder="رقم تليفونك *" value={phone} onChange={(e) => setPhone(e.target.value)} />
                 <input placeholder="ملاحظات (اختياري)" value={notes} onChange={(e) => setNotes(e.target.value)} />
               </div>
+              {minOrder > 0 && cartTotal < minOrder && (
+                <p className="red-text" style={{ marginTop: 8 }}>⚠️ أقل قيمة للطلب {num(minOrder, ar)} {cur} — ضيف بـ {num(minOrder - cartTotal, ar)} {cur} كمان</p>
+              )}
               {err && <p className="red-text" style={{ marginTop: 8 }}>⚠️ {err}</p>}
               <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-                <button className="btn-green" disabled={sending} onClick={send}>{sending ? '⏳ بنبعت...' : '✅ ابعت الطلب للمحل'}</button>
+                <button className="btn-green" disabled={sending || (minOrder > 0 && cartTotal < minOrder)} onClick={send}>{sending ? '⏳ بنبعت...' : '✅ ابعت الطلب للمحل'}</button>
                 <a className="btn" target="_blank" rel="noreferrer" href={waLink()}>💬 أو ابعته واتساب</a>
               </div>
             </div>
