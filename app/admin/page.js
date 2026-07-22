@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import QRCode from 'qrcode';
 import {
@@ -169,14 +169,21 @@ export default function AdminPage() {
     QRCode.toDataURL(url, { margin: 1, width: 180 }).then(setPhoneQr).catch(() => {});
   }, []);
 
+  // حفظ تلقائي: أي تعديل في الإعدادات بيتخزن لوحده بعد نص ثانية — من غير أزرار
+  const skipSave = useRef(true);
+  useEffect(() => {
+    if (!s) return;
+    if (skipSave.current) { skipSave.current = false; return; }
+    const t = setTimeout(() => {
+      saveSettings(s);
+      setMsg('✅ اتحفظ');
+      setTimeout(() => setMsg(''), 1500);
+    }, 500);
+    return () => clearTimeout(t);
+  }, [s]);
+
   if (!s) return null;
   const ar = s.arabicDigits;
-
-  function save() {
-    saveSettings(s);
-    setMsg('✅ تم الحفظ');
-    setTimeout(() => setMsg(''), 3000);
-  }
 
   return (
     <div>
@@ -502,7 +509,7 @@ export default function AdminPage() {
                 );
               })}
             </div>
-            <p className="muted" style={{ fontSize: 12 }}>💡 متنساش تضغط "حفظ إعدادات الأدمن" تحت — وهيسري على كل الأجهزة</p>
+            <p className="muted" style={{ fontSize: 12 }}>✅ أي تعديل بيتحفظ لوحده وبيسري على كل الأجهزة</p>
           </div>
           <div className="inv-preview-wrap">
             <div className="inv-preview">
@@ -557,10 +564,7 @@ export default function AdminPage() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-        <button className="btn-accent" onClick={save} style={{ fontSize: 16, padding: '10px 30px' }}>💾 حفظ إعدادات الأدمن</button>
-        {msg && <b>{msg}</b>}
-      </div>
+      {msg && <div className="save-flash">{msg}</div>}
     </div>
   );
 }
