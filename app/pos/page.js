@@ -98,6 +98,25 @@ export default function PosPage() {
     const touch = (navigator.maxTouchPoints || 0) > 0;
     const mob = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
     setIsMobile(touch && mob);
+    // جايين من طلب متجر؟ نملأ الفاتورة بأصنافه وبيانات التاجر تلقائياً
+    try {
+      const soId = new URLSearchParams(window.location.search).get('storeOrder');
+      if (soId) {
+        const o = JSON.parse(sessionStorage.getItem('saqqa_store_order') || 'null');
+        if (o && o.id === soId) {
+          setRows([
+            ...(o.items || []).map((it) => ({ code: it.code || '', name: it.name, qty: it.qty, price: it.price, disc: 0, notes: '', unit: '' })),
+            emptyRow(),
+          ]);
+          setCustomerName(o.trader?.name || '');
+          setCustomerPhone(o.trader?.phone || '');
+          setNumber(nextInvoiceNumber());
+          sessionStorage.removeItem('saqqa_store_order');
+          showToast('🛒 اتملت الفاتورة من طلب المتجر — راجعها واحفظها');
+          return;
+        }
+      }
+    } catch {}
     // استرجاع الفاتورة اللي كانت مفتوحة (لو النور قطع أو البرنامج اتقفل فجأة)
     let restored = false;
     try {
