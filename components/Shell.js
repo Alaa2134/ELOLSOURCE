@@ -25,6 +25,7 @@ const NAV = [
   { href: '/accountant', label: '🧮 لوحة المحاسب', title: 'برنامج المحاسب', roles: ['admin', 'accountant'] },
   { href: '/pos', label: '🧾 فاتورة بيع', title: 'فاتورة بيع', roles: ['admin', 'cashier'] },
   { href: '/', label: '📊 لوحة التحكم', title: 'لوحة التحكم', roles: ['admin', 'accountant'] },
+  { href: '/insights', label: '🧠 مركز الذكاء', title: 'نصايح تزوّد مكسبك', roles: ['admin', 'accountant'] },
   { href: '/payments', label: '💵 سند قبض', title: 'سند قبض', roles: ['admin', 'cashier', 'accountant'] },
   { href: '/reps', label: '🛵 تحصيل المندوبين', title: 'تحصيل المندوبين', roles: ['admin', 'accountant'] },
   { href: '/debts', label: '📕 متابعة الآجل', title: 'متابعة الآجل والمديونيات', roles: ['admin', 'accountant'] },

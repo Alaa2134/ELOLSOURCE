@@ -130,6 +130,7 @@ export default function Dashboard() {
             📉 النواقص {lowStock.length > 0 && <span className="badge red" style={{ marginRight: 6 }}>{num(lowStock.length, ar)}</span>}
           </Link>
           <Link className="btn btn-green" href="/whatsapp">💬 الواتساب</Link>
+          <Link className="btn" style={{ borderColor: 'var(--brand)', color: 'var(--brand)' }} href="/insights">🧠 مركز الذكاء</Link>
         </div>
       </div>
 
