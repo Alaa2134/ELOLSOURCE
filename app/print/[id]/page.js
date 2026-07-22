@@ -5,6 +5,7 @@ import QRCode from 'qrcode';
 import { getInvoice, getSettings, listInvoices } from '@/lib/db';
 import { invoiceLink, waMeLink, buildMessage } from '@/lib/wa';
 import InvoiceDoc from '@/components/InvoiceDoc';
+import ThermalReceipt from '@/components/ThermalReceipt';
 
 const SHORT_LIMIT = 8; // فاتورة ≤ 8 أصناف بتتطبع على نص ورقة A4
 
@@ -101,8 +102,8 @@ export default function PrintPage() {
         <button className="btn-accent" onClick={doPrint}>
           🖨️ طباعة{settings.printerName ? ` — ${settings.printerName}` : ''}
         </button>
-        <button onClick={() => setPaper(paper === 'a5' ? 'a4' : 'a5')}>
-          📄 {paper === 'a5' ? 'الوضع: نص ورقة (اقطع عند خط ✂)' : 'الوضع: ورقة كاملة'}
+        <button onClick={() => setPaper(paper === 'a4' ? 'a5' : paper === 'a5' ? 'thermal' : 'a4')}>
+          📄 الوضع: {paper === 'a4' ? 'ورقة كاملة A4' : paper === 'a5' ? 'نص ورقة A5' : 'إيصال حراري 80mm'}
         </button>
         {invoice.customer?.phone && (
           <a className="btn btn-green" target="_blank" rel="noreferrer" href={waMeLink(invoice.customer.phone, waMsg)}>
@@ -111,13 +112,22 @@ export default function PrintPage() {
         )}
         <button onClick={() => router.push('/pos')}>⬅ رجوع للبيع</button>
       </div>
-      <InvoiceDoc invoice={invoice} settings={settings} qrDataUrl={qr} paper={paper}
-        storeInfo={settings.store?.showOnInvoice !== false ? {
-          qr: storeQr,
-          link: (settings.publicBaseUrl || (typeof window !== 'undefined' ? window.location.origin : '')).replace(/\/$/, '') + '/store',
-        } : null} />
-      {paper === 'a5' && (
-        <div className="cut-line">- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -</div>
+      {paper === 'thermal' ? (
+        <>
+          <style>{`@media print { @page { size: 80mm auto; margin: 0; } body { background: #fff; } }`}</style>
+          <ThermalReceipt invoice={invoice} settings={settings} qrDataUrl={qr} />
+        </>
+      ) : (
+        <>
+          <InvoiceDoc invoice={invoice} settings={settings} qrDataUrl={qr} paper={paper}
+            storeInfo={settings.store?.showOnInvoice !== false ? {
+              qr: storeQr,
+              link: (settings.publicBaseUrl || (typeof window !== 'undefined' ? window.location.origin : '')).replace(/\/$/, '') + '/store',
+            } : null} />
+          {paper === 'a5' && (
+            <div className="cut-line">- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -</div>
+          )}
+        </>
       )}
     </div>
   );
