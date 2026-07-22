@@ -19,7 +19,7 @@ import {
   saveCashier,
   deleteCashier,
 } from '@/lib/db';
-import { SCHEMA_SQL, DRIVE_SCRIPT } from '@/lib/setupTexts';
+import { SCHEMA_SQL, DRIVE_SCRIPT, HARDEN_SQL } from '@/lib/setupTexts';
 import { num, todayISO } from '@/lib/format';
 import InvoiceDoc from '@/components/InvoiceDoc';
 import { confirmBox, dangerBox } from '@/lib/ui';
@@ -315,6 +315,24 @@ export default function AdminPage() {
             </li>
           </ol>
         </div>
+
+        {cloudEnabled() && (
+          <div className="wizard-step" style={{ borderRight: '4px solid var(--green)' }}>
+            <h4>🔒 طبقة حماية إضافية (اختياري لكن مفضّل)</h4>
+            <p className="muted" style={{ fontSize: 13, marginBottom: 8 }}>
+              بتخلي المفتاح العام لوحده مش كافي — لازم الجهاز يكون فاتح البرنامج (بيسجّل دخول مجهول تلقائياً من غير أي لوجين).
+              اعملها بالترتيب ده مرة واحدة:
+            </p>
+            <ol style={{ fontSize: 14 }}>
+              <li>من Supabase: <b>Authentication ← Providers</b> ← فعّل <b>Anonymous sign-ins</b>.</li>
+              <li>افتح البرنامج على <b>كل أجهزتك</b> مرة (عشان كل جهاز ياخد جلسة).</li>
+              <li>بعد كده: <b>SQL Editor</b> ← <CopyBtn text={HARDEN_SQL} label="📋 انسخ كود التشديد" /> ← الصقه واضغط <b>Run</b>.</li>
+            </ol>
+            <p className="muted" style={{ fontSize: 12 }}>
+              ⚠️ أي جهاز مافتحش النسخة الجديدة لسه هيفقد المزامنة لحد ما تفتحه وتحدّث الصفحة.
+            </p>
+          </div>
+        )}
 
         {wizUrl && wizKey && (
           <div className="wizard-step" style={{ borderRight: '4px solid var(--red)' }}>
