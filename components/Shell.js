@@ -43,6 +43,7 @@ const NAV = [
   { href: '/dayclose', label: '🧮 إقفال يومية', title: 'إقفال يومية', roles: ['admin', 'cashier', 'accountant'] },
   { href: '/inquiry', label: '📱 استعلام أسعار', title: 'استعلام أسعار', roles: ['admin', 'cashier', 'accountant'] },
   { href: '/reports', label: '📈 التقارير', title: 'التقارير', roles: ['admin', 'accountant'], perm: 'cashierReports' },
+  { href: '/pnl', label: '📗 أرباح وخسائر', title: 'كشف الأرباح والخسائر الشهري', roles: ['admin', 'accountant'] },
   { href: '/audit', label: '📜 سجل العمليات', title: 'سجل العمليات', roles: ['admin', 'accountant'] },
   { href: '/whatsapp', label: '💬 واتساب', title: 'واتساب', roles: ['admin'], perm: 'cashierWhatsapp' },
   { href: '/settings', label: '⚙️ الإعدادات', title: 'الإعدادات', roles: ['admin'] },
