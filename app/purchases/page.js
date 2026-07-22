@@ -20,8 +20,10 @@ import {
 } from '@/lib/db';
 import { num, fmtDate, todayISO } from '@/lib/format';
 import { dangerBox } from '@/lib/ui';
+import { useDraft, clearDraft } from '@/lib/useDraft';
 
 const emptyRow = () => ({ code: '', name: '', qty: 1, cost: '' });
+const DRAFT_KEY = 'saqqa_purchase_draft';
 
 export default function PurchasesPage() {
   const [settings, setSettings] = useState(null);
@@ -66,6 +68,22 @@ export default function PurchasesPage() {
     () => rows.reduce((s, r) => s + (Number(r.qty) || 0) * (Number(r.cost) || 0), 0),
     [rows]
   );
+
+  // حفظ مسودة فاتورة الشراء تلقائياً — بترجع لو النور قطع أو البرنامج اتقفل
+  // (بنتجاهل الاسترجاع لو جايين نحوّل طلب بضاعة من ?order=)
+  const convertingOrder = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('order');
+  useDraft(DRAFT_KEY, { rows, supplierName, supplierPhone, paid }, {
+    enabled: !convertingOrder,
+    hasContent: (d) => d.rows?.some((r) => r.code || r.name) || d.supplierName,
+    onRestore: (d) => {
+      if (convertingOrder) return;
+      if (d.rows?.length) setRows(d.rows);
+      if (d.supplierName) setSupplierName(d.supplierName);
+      if (d.supplierPhone) setSupplierPhone(d.supplierPhone);
+      if (d.paid !== undefined) setPaid(d.paid);
+      showToast('🔄 رجّعنا فاتورة الشراء اللي كنت بتكتبها — كمّل من حيث وقفت');
+    },
+  });
 
   if (!settings) return null;
   const ar = settings.arabicDigits;
@@ -116,6 +134,7 @@ export default function PurchasesPage() {
     }
     setRows([emptyRow()]);
     setPaid('');
+    clearDraft(DRAFT_KEY); // اتحفظت رسمي — المسودة خلصت
     reload();
     showToast(`✅ تم حفظ فاتورة الشراء ${p.number} — المخزون والتكلفة اتحدثوا`);
   }
