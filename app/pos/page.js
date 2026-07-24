@@ -21,6 +21,7 @@ import {
 import { num, todayISO, fmtDate, normalizePhone } from '@/lib/format';
 import { buildMessage, invoiceLink, waMeLink, gatewaySend, gatewayStatus, notifyAdmin } from '@/lib/wa';
 import { confirmBox, promptBox } from '@/lib/ui';
+import { buildFreq } from '@/lib/search';
 import ProductPicker from '@/components/ProductPicker';
 import BarcodeScanner from '@/components/BarcodeScanner';
 
@@ -64,6 +65,7 @@ export default function PosPage() {
   const [settings, setSettings] = useState(null);
   const [role, setRole] = useState('cashier');
   const [products, setProducts] = useState([]);
+  const [freq, setFreq] = useState(null); // كام مرة اتباع كل صنف — عشان الاقتراحات ترتب صح
   const [customers, setCustomers] = useState([]);
   const [rows, setRows] = useState([emptyRow()]);
   const [number, setNumber] = useState(0);
@@ -94,6 +96,7 @@ export default function PosPage() {
     setProducts(listProducts());
     setCustomers(listCustomers());
     setReps(listReps());
+    setFreq(buildFreq(listInvoices())); // الأصناف الدارجة تطلع فوق في الاقتراحات
     // كشف الموبايل (فيه كاميرا خلفية ولمس) عشان زرار الكاميرا
     const touch = (navigator.maxTouchPoints || 0) > 0;
     const mob = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
@@ -759,6 +762,7 @@ export default function PosPage() {
                             products={products}
                             arabicDigits={ar}
                             sortMode={settings.suggestSort}
+                            freq={freq}
                             onType={(v) => updateRow(i, { name: v })}
                             onSelect={(p) => { updateRow(i, { code: p.code, name: p.name, price: priceFor(p), unit: '' }); focusCell(i, 'qty'); }}
                             onNavKey={(e) => onKey(e, i, 'name')}

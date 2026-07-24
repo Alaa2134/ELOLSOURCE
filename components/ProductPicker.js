@@ -1,49 +1,48 @@
 'use client';
 // قائمة اقتراح منسدلة لاختيار الصنف بالاسم أو الكود مع تنقل بالأسهم
 // + سهم ▼ بيفتح الأصناف المشابهة (نفس أول كلمتين من الاسم) أو كل الأصناف
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { num } from '@/lib/format';
+import { searchProducts, similarProducts, normAr } from '@/lib/search';
 
-export default function ProductPicker({ value, products, onType, onSelect, onNavKey, dataR, dataC, arabicDigits, sortMode = 'ذكي' }) {
+// تظليل الكلمات اللي المستخدم كتبها جوه اسم الصنف — يشوف ليه الصنف ده ظهرله
+function Highlight({ text, words }) {
+  if (!words?.length) return text;
+  const norm = normAr(text);
+  const marks = new Array(text.length).fill(false);
+  for (const w of words) {
+    let from = 0;
+    for (;;) {
+      const at = norm.indexOf(w, from);
+      if (at < 0) break;
+      // الاسم الأصلي والمطبّع قد يختلفوا في الطول، فبنظلل تقريبياً بنفس المواضع
+      for (let i = at; i < at + w.length && i < marks.length; i++) marks[i] = true;
+      from = at + w.length;
+    }
+  }
+  const parts = [];
+  let cur = '', on = marks[0];
+  for (let i = 0; i < text.length; i++) {
+    if (marks[i] === on) cur += text[i];
+    else { parts.push({ on, t: cur }); cur = text[i]; on = marks[i]; }
+  }
+  parts.push({ on, t: cur });
+  return parts.map((p, i) => (p.on ? <mark key={i} className="pick-hit">{p.t}</mark> : <span key={i}>{p.t}</span>));
+}
+
+export default function ProductPicker({ value, products, onType, onSelect, onNavKey, dataR, dataC, arabicDigits, sortMode = 'ذكي', freq = null }) {
   const [open, setOpen] = useState(false);
   const [similar, setSimilar] = useState(false); // وضع "المشابهة" من السهم
   const [hi, setHi] = useState(0);
   const boxRef = useRef(null);
 
   const q = (value || '').trim();
-  let matches = [];
-  if (similar) {
-    // الأصناف المشابهة: نفس بداية الاسم — ولو الخانة فاضية نعرض من الأول
-    const base = q.split(' ').slice(0, 2).join(' ');
-    matches = (base ? products.filter((p) => p.name.includes(base)) : products).slice(0, 12);
-    if (base && matches.length <= 1) {
-      const firstWord = q.split(' ')[0];
-      matches = products.filter((p) => p.name.includes(firstWord)).slice(0, 12);
-    }
-  } else if (q) {
-    const hits = products.filter((p) => p.name.includes(q) || String(p.code).includes(q));
-    if (sortMode === 'أبجدي') {
-      // ترتيب أبجدي بالاسم
-      matches = hits.sort((a, b) => a.name.localeCompare(b.name, 'ar')).slice(0, 10);
-    } else if (sortMode === 'بالكود') {
-      // ترتيب برقم الصنف
-      matches = hits.sort((a, b) => (Number(a.code) || 0) - (Number(b.code) || 0)).slice(0, 10);
-    } else {
-      // ذكي: اللي بيبدأ بالمكتوب الأول، بعدين بداية كلمة، بعدين الكود، بعدين أي تطابق
-      const score = (p) => {
-        if (p.name.startsWith(q)) return 0;
-        if (p.name.includes(' ' + q)) return 1;
-        if (String(p.code).startsWith(q)) return 2;
-        if (p.name.includes(q)) return 3;
-        return 4;
-      };
-      matches = hits
-        .map((p) => ({ p, s: score(p) }))
-        .sort((a, b) => a.s - b.s || a.p.name.length - b.p.name.length || a.p.name.localeCompare(b.p.name))
-        .slice(0, 10)
-        .map((x) => x.p);
-    }
-  }
+  const words = useMemo(() => normAr(q).split(' ').filter(Boolean), [q]);
+  const matches = useMemo(() => {
+    if (similar) return similarProducts(products, q);
+    if (!q) return [];
+    return searchProducts(products, q, { freq, sortMode });
+  }, [q, similar, products, freq, sortMode]);
 
   useEffect(() => setHi(0), [q, similar]);
 
@@ -104,10 +103,17 @@ export default function ProductPicker({ value, products, onType, onSelect, onNav
               onMouseDown={(e) => { e.preventDefault(); pick(p); }}
               onMouseEnter={() => setHi(i)}
             >
-              <span className="p-name">{p.name}</span>
+              <span className="p-name">
+                {similar ? p.name : <Highlight text={p.name} words={words} />}
+              </span>
               <span className="p-meta">
                 كود {p.code} — <b>{num(p.price, arabicDigits)} ج</b>
-                {(Number(p.stock) || 0) <= 0 && <span className="badge red" style={{ marginRight: 6 }}>نافد</span>}
+                {(Number(p.stock) || 0) <= 0
+                  ? <span className="badge red" style={{ marginRight: 6 }}>نافد</span>
+                  : <span className="muted" style={{ marginRight: 6 }}>مخزون {num(p.stock, arabicDigits)}</span>}
+                {freq && (freq.get(String(p.code)) || 0) >= 3 && (
+                  <span className="badge orange" style={{ marginRight: 6 }}>⭐ دارج</span>
+                )}
               </span>
             </li>
           ))}

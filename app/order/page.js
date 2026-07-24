@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   listProducts,
+  listInvoices,
   findProduct,
   listSuppliers,
   listOrders,
@@ -16,6 +17,7 @@ import {
 import { num, fmtDate, todayISO } from '@/lib/format';
 import { waMeLink, buildOrderText } from '@/lib/wa';
 import ProductPicker from '@/components/ProductPicker';
+import { buildFreq } from '@/lib/search';
 import { dangerBox } from '@/lib/ui';
 import { useDraft, clearDraft } from '@/lib/useDraft';
 
@@ -28,6 +30,7 @@ export default function OrderPage() {
   const router = useRouter();
   const [settings, setSettings] = useState(null);
   const [products, setProducts] = useState([]);
+  const [freq, setFreq] = useState(null);
   const [suppliers, setSuppliers] = useState([]);
   const [orders, setOrders] = useState([]);
   const [rows, setRows] = useState([emptyRow()]);
@@ -39,6 +42,7 @@ export default function OrderPage() {
   function reload() {
     setSettings(getSettings());
     setProducts(listProducts());
+    setFreq(buildFreq(listInvoices()));
     setSuppliers(listSuppliers());
     setOrders(listOrders());
   }
@@ -224,6 +228,7 @@ export default function OrderPage() {
                     products={products}
                     arabicDigits={ar}
                     sortMode={settings.suggestSort}
+                    freq={freq}
                     onType={(v) => updateRow(i, { name: v })}
                     onSelect={(p) => updateRow(i, { code: p.code, name: p.name })}
                   />

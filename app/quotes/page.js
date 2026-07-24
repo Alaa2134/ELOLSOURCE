@@ -3,13 +3,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  listProducts, findProduct, listCustomers, getSettings,
+  listProducts,
+  listInvoices, findProduct, listCustomers, getSettings,
   listQuotes, saveQuote, nextQuoteNumber, setQuoteStatus, deleteQuote, cloudTableMissing,
 } from '@/lib/db';
 import { num, fmtDate, todayISO } from '@/lib/format';
 import { waMeLink } from '@/lib/wa';
 import { dangerBox } from '@/lib/ui';
 import ProductPicker from '@/components/ProductPicker';
+import { buildFreq } from '@/lib/search';
 import { useDraft, clearDraft } from '@/lib/useDraft';
 
 const emptyRow = () => ({ code: '', name: '', qty: 1, price: '' });
@@ -19,6 +21,7 @@ export default function QuotesPage() {
   const router = useRouter();
   const [settings, setSettings] = useState(null);
   const [products, setProducts] = useState([]);
+  const [freq, setFreq] = useState(null);
   const [customers, setCustomers] = useState([]);
   const [quotes, setQuotes] = useState([]);
   const [rows, setRows] = useState([emptyRow()]);
@@ -31,6 +34,7 @@ export default function QuotesPage() {
   function reload() {
     setSettings(getSettings());
     setProducts(listProducts());
+    setFreq(buildFreq(listInvoices()));
     setCustomers(listCustomers());
     setQuotes(listQuotes());
   }
@@ -138,7 +142,7 @@ export default function QuotesPage() {
               <tr key={i}>
                 <td><input className="num" value={r.code} onChange={(e) => updateRow(i, { code: e.target.value })}
                   onBlur={(e) => e.target.value && !r.name && lookupCode(i, e.target.value)} /></td>
-                <td><ProductPicker value={r.name} products={products} arabicDigits={ar} sortMode={settings.suggestSort}
+                <td><ProductPicker value={r.name} products={products} arabicDigits={ar} sortMode={settings.suggestSort} freq={freq}
                   onType={(v) => updateRow(i, { name: v })}
                   onSelect={(p) => updateRow(i, { code: p.code, name: p.name, price: priceFor(p) })} /></td>
                 <td><input className="num" type="number" min="0" step="any" value={r.qty} onChange={(e) => updateRow(i, { qty: e.target.value })} /></td>
