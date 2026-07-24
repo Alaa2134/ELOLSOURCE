@@ -73,6 +73,7 @@ export default function PosPage() {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [extraDisc, setExtraDisc] = useState(0);
+  const [showHaggle, setShowHaggle] = useState(false); // خانة الفصال مخفية لحد ما الكاشير يفتحها
   const [paid, setPaid] = useState('');
   const [rep, setRep] = useState(''); // المندوب اللي هيطلع بالفاتورة
   const [reps, setReps] = useState([]);
@@ -635,6 +636,18 @@ export default function PosPage() {
   return (
     <div>
       <div className="pos-banner">
+        {/* زرار الفصال — مخفي كأنه جزء من الشكل، الكاشير بس اللي يعرفه */}
+        {canDisc && (
+          <button
+            type="button"
+            className={`haggle-toggle ${showHaggle || (Number(extraDisc) || 0) > 0 ? 'on' : ''}`}
+            title=""
+            aria-label="."
+            onClick={() => setShowHaggle((v) => !v)}
+          >
+            ✋
+          </button>
+        )}
         <img src="/logo.jpg" alt="" className="banner-logo" />
         <h2>فـاتـورة بـيـع</h2>
         <img src="/logo.jpg" alt="" className="banner-logo" />
@@ -863,28 +876,25 @@ export default function PosPage() {
           <div className="box pos-totals">
             <div className="row"><span>الإجمالي</span><b>{num(subtotal, ar)} {settings.currency}</b></div>
             {canDisc && <div className="row"><span>خصم الأصناف</span><b className="red-text">{num(lineDiscs, ar)}</b></div>}
-            {canDisc && (
+            {canDisc && (showHaggle || (Number(extraDisc) || 0) > 0) && (
               <>
                 <div className="row haggle-row" style={{ alignItems: 'center' }}>
-                  <span title="لو العميل فاصل: اكتب الرقم اللي اتفقتوا عليه والباقي هيتحسب خصم">
-                    🤝 اتفقنا على
-                  </span>
+                  <span>الإجمالي بعد الاتفاق</span>
                   <input
-                    type="number" min="0" step="any"
+                    type="number" min="0" step="any" autoFocus
                     style={{ width: 110, textAlign: 'center', fontWeight: 900 }}
                     value={agreedValue}
                     onChange={(e) => setAgreed(e.target.value)}
-                    title="اكتب السعر النهائي بعد الفصال"
                   />
                 </div>
                 {(Number(extraDisc) || 0) > 0 && (
                   <div className="row">
-                    <span>الشركة هتتحمل</span>
+                    <span>فرق</span>
                     <b className="red-text">
                       {num(Number(extraDisc) || 0, ar)} {settings.currency}
                       <button
                         type="button" className="btn-sm" style={{ marginRight: 8, padding: '2px 8px' }}
-                        title="إلغاء الفصال" onClick={() => setExtraDisc(0)}
+                        onClick={() => { setExtraDisc(0); setShowHaggle(false); }}
                       >✕</button>
                     </b>
                   </div>
