@@ -231,7 +231,17 @@ export default function PosPage() {
   const subtotal = useMemo(() => rows.reduce((s, r) => s + (Number(r.qty) || 0) * (Number(r.price) || 0), 0), [rows]);
   const lineDiscs = useMemo(() => rows.reduce((s, r) => s + (Number(r.disc) || 0), 0), [rows]);
   const debtAdd = includeDebt ? prevDebt : 0;
+  const goodsBefore = Math.max(0, subtotal - lineDiscs); // قيمة البضاعة قبل الفصال
   const net = Math.max(0, subtotal - lineDiscs - (Number(extraDisc) || 0)) + debtAdd;
+
+  // الفصال: الكاشير بيكتب الرقم اللي اتفق عليه مع العميل، والبرنامج بيحسب الخصم لوحده
+  function setAgreed(v) {
+    if (v === '') { setExtraDisc(0); return; }
+    const a = Number(v);
+    if (Number.isNaN(a)) return;
+    setExtraDisc(Math.max(0, Math.round((goodsBefore - a) * 100) / 100));
+  }
+  const agreedValue = Math.round((goodsBefore - (Number(extraDisc) || 0)) * 100) / 100;
   const paidNum = paid === '' ? (payment === 'نقدي' ? net : 0) : Number(paid) || 0;
   const remaining = net - paidNum;
 
@@ -854,15 +864,32 @@ export default function PosPage() {
             <div className="row"><span>الإجمالي</span><b>{num(subtotal, ar)} {settings.currency}</b></div>
             {canDisc && <div className="row"><span>خصم الأصناف</span><b className="red-text">{num(lineDiscs, ar)}</b></div>}
             {canDisc && (
-              <div className="row" style={{ alignItems: 'center' }}>
-                <span>خصم إضافي</span>
-                <input
-                  type="number" min="0" step="any"
-                  style={{ width: 90, textAlign: 'center' }}
-                  value={extraDisc}
-                  onChange={(e) => setExtraDisc(e.target.value)}
-                />
-              </div>
+              <>
+                <div className="row haggle-row" style={{ alignItems: 'center' }}>
+                  <span title="لو العميل فاصل: اكتب الرقم اللي اتفقتوا عليه والباقي هيتحسب خصم">
+                    🤝 اتفقنا على
+                  </span>
+                  <input
+                    type="number" min="0" step="any"
+                    style={{ width: 110, textAlign: 'center', fontWeight: 900 }}
+                    value={agreedValue}
+                    onChange={(e) => setAgreed(e.target.value)}
+                    title="اكتب السعر النهائي بعد الفصال"
+                  />
+                </div>
+                {(Number(extraDisc) || 0) > 0 && (
+                  <div className="row">
+                    <span>الشركة هتتحمل</span>
+                    <b className="red-text">
+                      {num(Number(extraDisc) || 0, ar)} {settings.currency}
+                      <button
+                        type="button" className="btn-sm" style={{ marginRight: 8, padding: '2px 8px' }}
+                        title="إلغاء الفصال" onClick={() => setExtraDisc(0)}
+                      >✕</button>
+                    </b>
+                  </div>
+                )}
+              </>
             )}
             {debtAdd > 0 && (
               <div className="row"><span>حساب سابق</span><b className="red-text">+{num(debtAdd, ar)}</b></div>
