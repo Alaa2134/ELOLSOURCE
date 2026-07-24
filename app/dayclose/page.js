@@ -1,7 +1,7 @@
 'use client';
 // إقفال اليومية: مقارنة كاش الدرج الفعلي بالمفروض وتسجيل العجز/الزيادة
 import { useEffect, useMemo, useState } from 'react';
-import { listInvoices, listPayments, listExpenses, listDayCloses, saveDayClose, getSettings, getRole } from '@/lib/db';
+import { listInvoices, listPayments, listExpenses, listPurchases, listDayCloses, saveDayClose, getSettings, getRole } from '@/lib/db';
 import { num, fmtDate } from '@/lib/format';
 import { notifyAdmin } from '@/lib/wa';
 
@@ -14,6 +14,9 @@ export default function DayClosePage() {
   const [settings, setSettings] = useState(null);
   const [day, setDay] = useState('');
   const [actual, setActual] = useState('');
+  const [opening, setOpening] = useState(''); // رصيد افتتاحي (من إقفال امبارح)
+  const [withdraw, setWithdraw] = useState(''); // سحب نقدي من الدرج (صاحب المحل أخد)
+  const [deposit, setDeposit] = useState(''); // إيداع نقدي في الدرج (فكة مثلاً)
   const [notes, setNotes] = useState('');
   const [closes, setCloses] = useState([]);
   const [toast, setToast] = useState('');
@@ -24,25 +27,31 @@ export default function DayClosePage() {
     setCloses(listDayCloses());
   }, []);
 
+  // الرصيد الافتتاحي = الكاش الفعلي اللي اتعد آخر إقفال قبل اليوم ده (بيتحمّل تلقائياً)
+  useEffect(() => {
+    if (!day) return;
+    const prev = closes.filter((c) => c.day < day).sort((a, b) => b.day.localeCompare(a.day))[0];
+    setOpening(prev && prev.actual != null ? String(prev.actual) : '');
+  }, [day, closes]);
+
   const stats = useMemo(() => {
     if (!day) return null;
     const invs = listInvoices().filter((i) => dayKey(i.date) === day);
     const pays = listPayments().filter((p) => dayKey(p.date) === day);
     const exps = listExpenses().filter((x) => dayKey(x.date) === day);
+    const purs = listPurchases().filter((p) => dayKey(p.date) === day);
     const cashInvoices = invs.reduce((s, i) => s + (Number(i.totals?.paid) || 0), 0);
     const cashPayments = pays.reduce((s, p) => s + (Number(p.amount) || 0), 0);
     const expensesTotal = exps.reduce((s, x) => s + (Number(x.amount) || 0), 0);
+    const supplierCash = purs.reduce((s, p) => s + (Number(p.totals?.paid) || 0), 0);
     const sales = invs.reduce((s, i) => s + (Number(i.totals?.net) || 0), 0);
+    const openN = Number(opening) || 0, wN = Number(withdraw) || 0, dN = Number(deposit) || 0;
     return {
-      invCount: invs.length,
-      payCount: pays.length,
-      sales,
-      cashInvoices,
-      cashPayments,
-      expensesTotal,
-      expected: cashInvoices + cashPayments - expensesTotal,
+      invCount: invs.length, payCount: pays.length, sales,
+      cashInvoices, cashPayments, expensesTotal, supplierCash,
+      expected: openN + cashInvoices + cashPayments + dN - expensesTotal - supplierCash - wN,
     };
-  }, [day, closes]);
+  }, [day, closes, opening, withdraw, deposit]);
 
   if (!settings || !stats) return null;
   const ar = settings.arabicDigits;
@@ -55,6 +64,12 @@ export default function DayClosePage() {
       day,
       invCount: stats.invCount,
       sales: stats.sales,
+      opening: Number(opening) || 0,
+      cashInvoices: stats.cashInvoices,
+      cashPayments: stats.cashPayments,
+      supplierCash: stats.supplierCash,
+      withdraw: Number(withdraw) || 0,
+      deposit: Number(deposit) || 0,
       expenses: stats.expensesTotal,
       expected: stats.expected,
       actual: actualNum,
@@ -84,13 +99,25 @@ export default function DayClosePage() {
             <span>اليوم</span>
             <input type="date" value={day} onChange={(e) => setDay(e.target.value)} />
           </label>
+          <label className="field" style={{ marginBottom: 10 }}>
+            <span>رصيد افتتاحي في الدرج (من إقفال امبارح — تقدر تعدّله)</span>
+            <input type="number" step="any" value={opening} onChange={(e) => setOpening(e.target.value)} />
+          </label>
           <div className="pos-totals" style={{ marginBottom: 12 }}>
-            <div className="row"><span>عدد الفواتير</span><b>{num(stats.invCount, ar)}</b></div>
-            <div className="row"><span>إجمالي المبيعات</span><b>{num(stats.sales, ar)} {settings.currency}</b></div>
-            <div className="row"><span>المحصل من الفواتير</span><b>{num(stats.cashInvoices, ar)}</b></div>
-            <div className="row"><span>المحصل من سندات القبض</span><b>{num(stats.cashPayments, ar)}</b></div>
-            <div className="row"><span>مصاريف اليوم (بتتخصم)</span><b className="red-text">−{num(stats.expensesTotal, ar)}</b></div>
+            <div className="row"><span>رصيد افتتاحي</span><b>{num(Number(opening) || 0, ar)}</b></div>
+            <div className="row"><span>+ محصّل الفواتير ({num(stats.invCount, ar)})</span><b className="green-text">+{num(stats.cashInvoices, ar)}</b></div>
+            <div className="row"><span>+ محصّل سندات القبض</span><b className="green-text">+{num(stats.cashPayments, ar)}</b></div>
+            {Number(deposit) > 0 && <div className="row"><span>+ إيداع نقدي</span><b className="green-text">+{num(Number(deposit), ar)}</b></div>}
+            <div className="row"><span>− مصاريف اليوم</span><b className="red-text">−{num(stats.expensesTotal, ar)}</b></div>
+            {stats.supplierCash > 0 && <div className="row"><span>− مدفوع للموردين نقدي</span><b className="red-text">−{num(stats.supplierCash, ar)}</b></div>}
+            {Number(withdraw) > 0 && <div className="row"><span>− سحب من الدرج</span><b className="red-text">−{num(Number(withdraw), ar)}</b></div>}
             <div className="row big"><span>المفروض في الدرج</span><span>{num(stats.expected, ar)} {settings.currency}</span></div>
+          </div>
+          <div className="grid cols-2" style={{ gap: 8, marginBottom: 10 }}>
+            <label className="field"><span>سحب نقدي من الدرج</span>
+              <input type="number" min="0" step="any" value={withdraw} onChange={(e) => setWithdraw(e.target.value)} placeholder="0" /></label>
+            <label className="field"><span>إيداع نقدي (فكة مثلاً)</span>
+              <input type="number" min="0" step="any" value={deposit} onChange={(e) => setDeposit(e.target.value)} placeholder="0" /></label>
           </div>
           <label className="field" style={{ marginBottom: 10 }}>
             <span>الكاش الفعلي اللي اتعد في الدرج</span>
