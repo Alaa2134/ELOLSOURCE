@@ -22,37 +22,48 @@ import { maybeSendDailyReport, maybeSendDebtReminders } from '@/lib/wa';
 import GlobalSearch from '@/components/GlobalSearch';
 
 // roles: مين يشوف الصفحة — perm: صلاحية بتسمح للكاشير لو الأدمن فعّلها
+// group: القسم في القايمة الجانبية (عشان الـ27 صفحة تبقى مرتبة مش كومة واحدة)
 const NAV = [
-  { href: '/accountant', label: '🧮 لوحة المحاسب', title: 'برنامج المحاسب', roles: ['admin', 'accountant'] },
-  { href: '/pos', label: '🧾 فاتورة بيع', title: 'فاتورة بيع', roles: ['admin', 'cashier'] },
-  { href: '/', label: '📊 لوحة التحكم', title: 'لوحة التحكم', roles: ['admin', 'accountant'] },
-  { href: '/insights', label: '🧠 مركز الذكاء', title: 'نصايح تزوّد مكسبك', roles: ['admin', 'accountant'] },
-  { href: '/payments', label: '💵 سند قبض', title: 'سند قبض', roles: ['admin', 'cashier', 'accountant'] },
-  { href: '/reps', label: '🛵 تحصيل المندوبين', title: 'تحصيل المندوبين', roles: ['admin', 'accountant'] },
-  { href: '/debts', label: '📕 متابعة الآجل', title: 'متابعة الآجل والمديونيات', roles: ['admin', 'accountant'] },
-  { href: '/expenses', label: '💸 المصاريف اليومية', title: 'المصاريف اليومية', roles: ['admin', 'cashier', 'accountant'] },
-  { href: '/invoices', label: '📁 الفواتير', title: 'الفواتير', roles: ['admin', 'cashier', 'accountant'] },
-  { href: '/store-orders', label: '📥 طلبات المتجر', title: 'طلبات التجار من المتجر أونلاين', roles: ['admin', 'cashier', 'accountant'] },
-  { href: '/returns', label: '↩️ مرتجع بيع', title: 'مرتجع بيع', roles: ['admin', 'cashier'] },
-  { href: '/purchases', label: '📥 المشتريات والموردين', title: 'المشتريات والموردين', roles: ['admin', 'accountant'] },
-  { href: '/order', label: '📋 طلب بضاعة من مورد', title: 'طلب بضاعة من مورد', roles: ['admin', 'accountant'] },
-  { href: '/quotes', label: '📝 عروض أسعار', title: 'عروض أسعار للعملاء', roles: ['admin', 'cashier', 'accountant'] },
-  { href: '/statement', label: '📄 كشف حساب', title: 'كشف حساب عميل', roles: ['admin', 'cashier', 'accountant'] },
-  { href: '/pricelist', label: '📃 قائمة أسعار', title: 'قائمة أسعار الجملة للطباعة والواتساب', roles: ['admin', 'accountant'] },
-  { href: '/products', label: '📦 الأصناف والمخزون', title: 'الأصناف والمخزون', roles: ['admin', 'cashier'] },
-  { href: '/lowstock', label: '📉 النواقص', title: 'النواقص', roles: ['admin', 'cashier', 'accountant'] },
-  { href: '/customers', label: '👥 العملاء', title: 'العملاء', roles: ['admin', 'cashier'] },
-  { href: '/barcodes', label: '🏷️ استيكر باركود', title: 'استيكر باركود', roles: ['admin', 'cashier'] },
-  { href: '/stocktake', label: '📋 جرد المخزون', title: 'جرد المخزون', roles: ['admin', 'cashier'] },
-  { href: '/dayclose', label: '🧮 إقفال يومية', title: 'إقفال يومية', roles: ['admin', 'cashier', 'accountant'] },
-  { href: '/inquiry', label: '📱 استعلام أسعار', title: 'استعلام أسعار', roles: ['admin', 'cashier', 'accountant'] },
-  { href: '/reports', label: '📈 التقارير', title: 'التقارير', roles: ['admin', 'accountant'], perm: 'cashierReports' },
-  { href: '/pnl', label: '📗 أرباح وخسائر', title: 'كشف الأرباح والخسائر الشهري', roles: ['admin', 'accountant'] },
-  { href: '/audit', label: '📜 سجل العمليات', title: 'سجل العمليات', roles: ['admin', 'accountant'] },
-  { href: '/whatsapp', label: '💬 واتساب', title: 'واتساب', roles: ['admin'], perm: 'cashierWhatsapp' },
-  { href: '/settings', label: '⚙️ الإعدادات', title: 'الإعدادات', roles: ['admin'] },
-  { href: '/admin', label: '👑 لوحة الأدمن', title: 'لوحة الأدمن', roles: ['admin'] },
+  // — البيع اليومي —
+  { href: '/pos', label: '🧾 فاتورة بيع', title: 'فاتورة بيع', roles: ['admin', 'cashier'], group: 'يومي' },
+  { href: '/payments', label: '💵 سند قبض', title: 'سند قبض', roles: ['admin', 'cashier', 'accountant'], group: 'يومي' },
+  { href: '/returns', label: '↩️ مرتجع بيع', title: 'مرتجع بيع', roles: ['admin', 'cashier'], group: 'يومي' },
+  { href: '/expenses', label: '💸 المصاريف', title: 'المصاريف اليومية', roles: ['admin', 'cashier', 'accountant'], group: 'يومي' },
+  { href: '/dayclose', label: '🧮 إقفال يومية', title: 'إقفال يومية والخزنة', roles: ['admin', 'cashier', 'accountant'], group: 'يومي' },
+  { href: '/store-orders', label: '📥 طلبات المتجر', title: 'طلبات التجار من المتجر أونلاين', roles: ['admin', 'cashier', 'accountant'], group: 'يومي' },
+
+  // — المخزون —
+  { href: '/products', label: '📦 الأصناف والمخزون', title: 'الأصناف والمخزون', roles: ['admin', 'cashier'], group: 'المخزون' },
+  { href: '/lowstock', label: '📉 النواقص', title: 'النواقص', roles: ['admin', 'cashier', 'accountant'], group: 'المخزون' },
+  { href: '/purchases', label: '📥 المشتريات والموردين', title: 'المشتريات والموردين', roles: ['admin', 'accountant'], group: 'المخزون' },
+  { href: '/order', label: '📋 طلب بضاعة', title: 'طلب بضاعة من مورد', roles: ['admin', 'accountant'], group: 'المخزون' },
+  { href: '/stocktake', label: '📋 جرد المخزون', title: 'جرد المخزون', roles: ['admin', 'cashier'], group: 'المخزون' },
+  { href: '/barcodes', label: '🏷️ استيكر باركود', title: 'استيكر باركود', roles: ['admin', 'cashier'], group: 'المخزون' },
+
+  // — العملاء —
+  { href: '/customers', label: '👥 العملاء', title: 'العملاء', roles: ['admin', 'cashier'], group: 'العملاء' },
+  { href: '/debts', label: '📕 متابعة الآجل', title: 'متابعة الآجل والمديونيات', roles: ['admin', 'accountant'], group: 'العملاء' },
+  { href: '/reps', label: '🛵 تحصيل المندوبين', title: 'تحصيل المندوبين', roles: ['admin', 'accountant'], group: 'العملاء' },
+  { href: '/statement', label: '📄 كشف حساب', title: 'كشف حساب عميل', roles: ['admin', 'cashier', 'accountant'], group: 'العملاء' },
+  { href: '/quotes', label: '📝 عروض أسعار', title: 'عروض أسعار للعملاء', roles: ['admin', 'cashier', 'accountant'], group: 'العملاء' },
+  { href: '/invoices', label: '📁 الفواتير', title: 'الفواتير', roles: ['admin', 'cashier', 'accountant'], group: 'العملاء' },
+
+  // — التقارير —
+  { href: '/', label: '📊 لوحة التحكم', title: 'لوحة التحكم', roles: ['admin', 'accountant'], group: 'التقارير' },
+  { href: '/insights', label: '🧠 مركز الذكاء', title: 'نصايح تزوّد مكسبك', roles: ['admin', 'accountant'], group: 'التقارير' },
+  { href: '/reports', label: '📈 التقارير', title: 'التقارير', roles: ['admin', 'accountant'], perm: 'cashierReports', group: 'التقارير' },
+  { href: '/pnl', label: '📗 أرباح وخسائر', title: 'كشف الأرباح والخسائر الشهري', roles: ['admin', 'accountant'], group: 'التقارير' },
+  { href: '/accountant', label: '🧮 لوحة المحاسب', title: 'برنامج المحاسب', roles: ['admin', 'accountant'], group: 'التقارير' },
+  { href: '/pricelist', label: '📃 قائمة أسعار', title: 'قائمة أسعار الجملة للطباعة والواتساب', roles: ['admin', 'accountant'], group: 'التقارير' },
+
+  // — أدوات —
+  { href: '/inquiry', label: '📱 استعلام أسعار', title: 'استعلام أسعار', roles: ['admin', 'cashier', 'accountant'], group: 'أدوات' },
+  { href: '/whatsapp', label: '💬 واتساب', title: 'واتساب', roles: ['admin'], perm: 'cashierWhatsapp', group: 'أدوات' },
+  { href: '/audit', label: '📜 سجل العمليات', title: 'سجل العمليات', roles: ['admin', 'accountant'], group: 'أدوات' },
+  { href: '/settings', label: '⚙️ الإعدادات', title: 'الإعدادات', roles: ['admin'], group: 'أدوات' },
+  { href: '/admin', label: '👑 لوحة الأدمن', title: 'لوحة الأدمن', roles: ['admin'], group: 'أدوات' },
 ];
+const NAV_GROUPS = ['يومي', 'المخزون', 'العملاء', 'التقارير', 'أدوات'];
 
 const ROLE_HOME = { admin: '/', cashier: '/pos', accountant: '/accountant' };
 const ROLE_LABEL = { admin: '👑 أدمن — نظام الكاشير', cashier: '💼 كاشير — نظام الكاشير', accountant: '🧮 برنامج المحاسب' };
@@ -304,17 +315,26 @@ export default function Shell({ children }) {
           </div>
         </div>
         <nav>
-          {visibleNav.map((n) => (
-            <Link key={n.href} href={n.href} className={pathname === n.href ? 'active' : ''}>
-              <span>{n.label}</span>
-              {n.href === '/lowstock' && lowCount > 0 && (
-                <span className="nav-badge">{lowCount}</span>
-              )}
-              {n.href === '/store-orders' && storeNew > 0 && (
-                <span className="nav-badge">{storeNew}</span>
-              )}
-            </Link>
-          ))}
+          {NAV_GROUPS.map((g) => {
+            const items = visibleNav.filter((n) => n.group === g);
+            if (!items.length) return null;
+            return (
+              <div key={g}>
+                <div className="nav-group">{g}</div>
+                {items.map((n) => (
+                  <Link key={n.href} href={n.href} className={pathname === n.href ? 'active' : ''}>
+                    <span>{n.label}</span>
+                    {n.href === '/lowstock' && lowCount > 0 && (
+                      <span className="nav-badge">{lowCount}</span>
+                    )}
+                    {n.href === '/store-orders' && storeNew > 0 && (
+                      <span className="nav-badge">{storeNew}</span>
+                    )}
+                  </Link>
+                ))}
+              </div>
+            );
+          })}
         </nav>
         <div className="foot">
           {cloud ? '☁️ متزامن لحظياً مع السحابة' : '💾 تخزين محلي (فعّل السحابة من الإعدادات)'}

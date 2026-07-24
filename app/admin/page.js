@@ -66,6 +66,19 @@ const INV_TOGGLES = [
   ['showPageNo', 'ترقيم الصفحات'],
 ];
 
+// خطوة في معالج الربط — بتتقفل لوحدها لما تخلص عشان الصفحة تفضل نضيفة
+function Step({ title, done = false, children }) {
+  return (
+    <details className="wizard-step" open={!done}>
+      <summary style={{ cursor: 'pointer', fontWeight: 700, listStyle: 'none' }}>
+        {done ? '✅ ' : ''}{title}
+        {done && <span className="badge green" style={{ marginRight: 8 }}>متفعّلة</span>}
+      </summary>
+      <div style={{ marginTop: 10 }}>{children}</div>
+    </details>
+  );
+}
+
 function CopyBtn({ text, label }) {
   const [done, setDone] = useState(false);
   return (
@@ -287,13 +300,9 @@ export default function AdminPage() {
       </div>
 
       <div className="card" style={{ borderTop: '4px solid var(--accent)' }}>
-        <h3>🪄 معالج الربط — 3 خطوات، افتح وانسخ والصق وبس</h3>
-        <p className="muted" style={{ fontSize: 13, marginBottom: 14 }}>
-          كل زرار بيفتحلك الصفحة الصح على المتصفح، وكل كود ليه زرار نسخ جاهز — مش محتاج تفهم أي حاجة تقنية.
-        </p>
+        <h3>🪄 معالج الربط</h3>
 
-        <div className="wizard-step">
-          <h4>1️⃣ المزامنة الأونلاين (مرة واحدة بس) {cloudEnabled() && <span className="badge green">✅ متفعلة</span>}</h4>
+        <Step title="1️⃣ المزامنة الأونلاين" done={cloudEnabled()}>
           <ol>
             <li>
               <a className="btn btn-primary btn-sm" href="https://supabase.com/dashboard/sign-up" target="_blank" rel="noreferrer">🌐 افتح موقع Supabase</a>
@@ -314,32 +323,21 @@ export default function AdminPage() {
               {wizMsg && <b style={{ marginRight: 10, fontSize: 13 }}>{wizMsg}</b>}
             </li>
           </ol>
-        </div>
+        </Step>
 
         {cloudEnabled() && (
-          <div className="wizard-step" style={{ borderRight: '4px solid var(--green)' }}>
-            <h4>🔒 طبقة حماية إضافية (اختياري لكن مفضّل)</h4>
-            <p className="muted" style={{ fontSize: 13, marginBottom: 8 }}>
-              بتخلي المفتاح العام لوحده مش كافي — لازم الجهاز يكون فاتح البرنامج (بيسجّل دخول مجهول تلقائياً من غير أي لوجين).
-              اعملها بالترتيب ده مرة واحدة:
-            </p>
+          <Step title="🔒 طبقة حماية إضافية (اختياري)">
             <ol style={{ fontSize: 14 }}>
-              <li>من Supabase: <b>Authentication ← Providers</b> ← فعّل <b>Anonymous sign-ins</b>.</li>
-              <li>افتح البرنامج على <b>كل أجهزتك</b> مرة (عشان كل جهاز ياخد جلسة).</li>
-              <li>بعد كده: <b>SQL Editor</b> ← <CopyBtn text={HARDEN_SQL} label="📋 انسخ كود التشديد" /> ← الصقه واضغط <b>Run</b>.</li>
+              <li>Supabase: <b>Authentication ← Providers</b> ← فعّل <b>Anonymous sign-ins</b></li>
+              <li>افتح البرنامج على <b>كل أجهزتك</b> مرة</li>
+              <li><b>SQL Editor</b> ← <CopyBtn text={HARDEN_SQL} label="📋 انسخ كود التشديد" /> ← الصق و<b>Run</b></li>
             </ol>
-            <p className="muted" style={{ fontSize: 12 }}>
-              ⚠️ أي جهاز مافتحش النسخة الجديدة لسه هيفقد المزامنة لحد ما تفتحه وتحدّث الصفحة.
-            </p>
-          </div>
+            <p className="muted" style={{ fontSize: 12 }}>⚠️ اتبع الترتيب ده — أي جهاز مافتحش البرنامج هيفقد المزامنة لحد ما تفتحه.</p>
+          </Step>
         )}
 
         {wizUrl && wizKey && (
-          <div className="wizard-step" style={{ borderRight: '4px solid var(--red)' }}>
-            <h4>⭐ خطوة مهمة: علشان QR الفاتورة يفتح مع العميل دايماً</h4>
-            <p className="muted" style={{ fontSize: 13, marginBottom: 8 }}>
-              من غيرها رابط الفاتورة بيشتغل بس من الروابط الجديدة — معاها أي QR (حتى المطبوع قديم) بيفتح مع أي عميل للأبد. مرة واحدة و3 دقايق:
-            </p>
+          <Step title="⭐ خلي QR الفاتورة يفتح مع أي عميل للأبد">
             <ol>
               <li>
                 <a className="btn btn-primary btn-sm" href="https://vercel.com/alaas-projects-f306dc93/alsaka/settings/environment-variables" target="_blank" rel="noreferrer">
@@ -364,11 +362,10 @@ export default function AdminPage() {
                 &nbsp;← تاب <b>Deployments</b> ← النقط الثلاثة ⋯ جنب أول واحد ← <b>Redeploy</b> ← واستنى دقيقتين. خلاص! 🎉
               </li>
             </ol>
-          </div>
+          </Step>
         )}
 
-        <div className="wizard-step">
-          <h4>2️⃣ نسخة احتياطية يومية على جوجل درايف {s.backupUrl && <span className="badge green">✅ متفعلة</span>}</h4>
+        <Step title="2️⃣ نسخة احتياطية يومية على جوجل درايف" done={!!s.backupUrl}>
           <ol>
             <li>
               <a className="btn btn-primary btn-sm" href="https://script.google.com/home/projects/create" target="_blank" rel="noreferrer">🌐 افتح Google Script</a>
@@ -394,17 +391,16 @@ export default function AdminPage() {
               </div>
             </li>
           </ol>
-        </div>
+        </Step>
 
-        <div className="wizard-step">
-          <h4>3️⃣ الواتساب (من برنامج الكاشير على الكمبيوتر)</h4>
+        <Step title="3️⃣ الواتساب" done={!!s.wa?.gatewayUrl}>
           <ol>
-            <li>افتح <b>برنامج كاشير السقا</b> المسطب على الكمبيوتر (البوابة شغالة جواه تلقائياً)</li>
-            <li>من القايمة افتح صفحة <b>💬 واتساب</b> — هتلاقي مربع QR ظاهر</li>
-            <li>من موبايل رقم المحل: واتساب ← الإعدادات ← <b>الأجهزة المرتبطة</b> ← <b>ربط جهاز</b> ← صوّر الـ QR — وخلاص، رسايل الشكر والتقارير هتتبعت لوحدها</li>
+            <li>افتح <b>برنامج كاشير السقا</b> على الكمبيوتر</li>
+            <li>من القايمة: صفحة <b>💬 واتساب</b> — هيظهر مربع QR</li>
+            <li>من موبايل المحل: واتساب ← <b>الأجهزة المرتبطة</b> ← <b>ربط جهاز</b> ← صوّر الـ QR</li>
           </ol>
           <Link href="/whatsapp" className="btn btn-green btn-sm">💬 افتح صفحة الواتساب</Link>
-        </div>
+        </Step>
       </div>
 
       <div className="grid cols-2">
