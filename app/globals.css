@@ -814,6 +814,9 @@ table.tbl tr:hover td { background: #fef3ec; }
   border-radius: 4px;
 }
 
+/* تظليل الكلام اللي المستخدم كتبه جوه اقتراحات الأصناف */
+.pick-hit { background: #ffe9a8; color: inherit; font-weight: 900; border-radius: 3px; padding: 0 1px; }
+
 /* عناوين أقسام القايمة الجانبية */
 .nav-group {
   color: rgba(255,255,255,.42);
