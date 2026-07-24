@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   listProducts, findProduct, listCustomers, getSettings,
-  listQuotes, saveQuote, nextQuoteNumber, setQuoteStatus, deleteQuote,
+  listQuotes, saveQuote, nextQuoteNumber, setQuoteStatus, deleteQuote, cloudTableMissing,
 } from '@/lib/db';
 import { num, fmtDate, todayISO } from '@/lib/format';
 import { waMeLink } from '@/lib/wa';
@@ -26,6 +26,7 @@ export default function QuotesPage() {
   const [custPhone, setCustPhone] = useState('');
   const [notes, setNotes] = useState('');
   const [toast, setToast] = useState('');
+  const [tableMissing, setTableMissing] = useState(false);
 
   function reload() {
     setSettings(getSettings());
@@ -34,6 +35,7 @@ export default function QuotesPage() {
     setQuotes(listQuotes());
   }
   useEffect(reload, []);
+  useEffect(() => { cloudTableMissing('quotes').then(setTableMissing); }, []);
 
   useDraft(DRAFT_KEY, { rows, custName, custPhone, notes }, {
     hasContent: (d) => d.rows?.some((r) => r.code || r.name) || d.custName,
@@ -106,6 +108,13 @@ export default function QuotesPage() {
 
   return (
     <div>
+      {tableMissing && (
+        <div className="card" style={{ borderRight: '4px solid var(--accent)', background: '#fff8f2' }}>
+          <b>ℹ️ عروض الأسعار شغّالة على الجهاز ده بس دلوقتي</b>
+          <p style={{ marginTop: 6 }}>جدول العروض لسه متعملش في السحابة، فالعروض <b>مش هتتزامن</b> مع باقي أجهزتك. الحل: لوحة الأدمن ← <b>«📋 انسخ كود الجداول»</b> ← شغّله في Supabase SQL Editor (آمن ومتكرر).</p>
+        </div>
+      )}
+
       <div className="card">
         <h3>📝 عرض سعر جديد <small className="muted">— بيتبعت للعميل ويتحوّل لفاتورة بضغطة</small></h3>
         <div className="grid cols-3" style={{ marginBottom: 12 }}>
