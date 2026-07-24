@@ -869,11 +869,19 @@ table.tbl tr:hover td { background: #fef3ec; }
 
 /* عناوين أقسام القايمة الجانبية */
 .nav-group {
-  color: rgba(255,255,255,.42);
-  font-size: 11px; font-weight: 700; letter-spacing: .5px;
-  padding: 14px 18px 4px;
+  display: flex; align-items: center; gap: 8px;
+  color: var(--accent);
+  font-size: 13px; font-weight: 900; letter-spacing: .3px;
+  padding: 8px 18px;
+  margin-top: 14px;
+  background: rgba(0,0,0,.22);
+  border-right: 3px solid var(--accent);
 }
-.nav-group:first-child { padding-top: 6px; }
+/* خط خفيف بعد اسم القسم يمد لآخر القايمة */
+.nav-group::after {
+  content: ''; flex: 1; height: 1px; background: rgba(242,106,27,.35);
+}
+.sidebar nav > div:first-child .nav-group { margin-top: 4px; }
 
 /* بادج النواقص في القايمة الجانبية */
 .sidebar nav a { justify-content: space-between; }
