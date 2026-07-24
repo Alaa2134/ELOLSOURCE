@@ -25,12 +25,12 @@ import GlobalSearch from '@/components/GlobalSearch';
 // group: القسم في القايمة الجانبية (عشان الـ27 صفحة تبقى مرتبة مش كومة واحدة)
 const NAV = [
   // — البيع اليومي —
-  { href: '/pos', label: '🧾 فاتورة بيع', title: 'فاتورة بيع', roles: ['admin', 'cashier'], group: 'يومي' },
-  { href: '/payments', label: '💵 سند قبض', title: 'سند قبض', roles: ['admin', 'cashier', 'accountant'], group: 'يومي' },
-  { href: '/returns', label: '↩️ مرتجع بيع', title: 'مرتجع بيع', roles: ['admin', 'cashier'], group: 'يومي' },
-  { href: '/expenses', label: '💸 المصاريف', title: 'المصاريف اليومية', roles: ['admin', 'cashier', 'accountant'], group: 'يومي' },
-  { href: '/dayclose', label: '🧮 إقفال يومية', title: 'إقفال يومية والخزنة', roles: ['admin', 'cashier', 'accountant'], group: 'يومي' },
-  { href: '/store-orders', label: '📥 طلبات المتجر', title: 'طلبات التجار من المتجر أونلاين', roles: ['admin', 'cashier', 'accountant'], group: 'يومي' },
+  { href: '/pos', label: '🧾 فاتورة بيع', title: 'فاتورة بيع', roles: ['admin', 'cashier'], group: 'الشغل اليومي' },
+  { href: '/payments', label: '💵 سند قبض', title: 'سند قبض', roles: ['admin', 'cashier', 'accountant'], group: 'الشغل اليومي' },
+  { href: '/returns', label: '↩️ مرتجع بيع', title: 'مرتجع بيع', roles: ['admin', 'cashier'], group: 'الشغل اليومي' },
+  { href: '/expenses', label: '💸 المصاريف', title: 'المصاريف اليومية', roles: ['admin', 'cashier', 'accountant'], group: 'الشغل اليومي' },
+  { href: '/dayclose', label: '🧮 إقفال يومية', title: 'إقفال يومية والخزنة', roles: ['admin', 'cashier', 'accountant'], group: 'الشغل اليومي' },
+  { href: '/store-orders', label: '📥 طلبات المتجر', title: 'طلبات التجار من المتجر أونلاين', roles: ['admin', 'cashier', 'accountant'], group: 'الشغل اليومي' },
 
   // — المخزون —
   { href: '/products', label: '📦 الأصناف والمخزون', title: 'الأصناف والمخزون', roles: ['admin', 'cashier'], group: 'المخزون' },
@@ -57,13 +57,13 @@ const NAV = [
   { href: '/pricelist', label: '📃 قائمة أسعار', title: 'قائمة أسعار الجملة للطباعة والواتساب', roles: ['admin', 'accountant'], group: 'التقارير' },
 
   // — أدوات —
-  { href: '/inquiry', label: '📱 استعلام أسعار', title: 'استعلام أسعار', roles: ['admin', 'cashier', 'accountant'], group: 'أدوات' },
-  { href: '/whatsapp', label: '💬 واتساب', title: 'واتساب', roles: ['admin'], perm: 'cashierWhatsapp', group: 'أدوات' },
-  { href: '/audit', label: '📜 سجل العمليات', title: 'سجل العمليات', roles: ['admin', 'accountant'], group: 'أدوات' },
-  { href: '/settings', label: '⚙️ الإعدادات', title: 'الإعدادات', roles: ['admin'], group: 'أدوات' },
-  { href: '/admin', label: '👑 لوحة الأدمن', title: 'لوحة الأدمن', roles: ['admin'], group: 'أدوات' },
+  { href: '/inquiry', label: '📱 استعلام أسعار', title: 'استعلام أسعار', roles: ['admin', 'cashier', 'accountant'], group: 'إعدادات وأدوات' },
+  { href: '/whatsapp', label: '💬 واتساب', title: 'واتساب', roles: ['admin'], perm: 'cashierWhatsapp', group: 'إعدادات وأدوات' },
+  { href: '/audit', label: '📜 سجل العمليات', title: 'سجل العمليات', roles: ['admin', 'accountant'], group: 'إعدادات وأدوات' },
+  { href: '/settings', label: '⚙️ الإعدادات', title: 'الإعدادات', roles: ['admin'], group: 'إعدادات وأدوات' },
+  { href: '/admin', label: '👑 لوحة الأدمن', title: 'لوحة الأدمن', roles: ['admin'], group: 'إعدادات وأدوات' },
 ];
-const NAV_GROUPS = ['يومي', 'المخزون', 'العملاء', 'التقارير', 'أدوات'];
+const NAV_GROUPS = ['الشغل اليومي', 'المخزون', 'العملاء', 'التقارير', 'إعدادات وأدوات'];
 
 const ROLE_HOME = { admin: '/', cashier: '/pos', accountant: '/accountant' };
 const ROLE_LABEL = { admin: '👑 أدمن — نظام الكاشير', cashier: '💼 كاشير — نظام الكاشير', accountant: '🧮 برنامج المحاسب' };
