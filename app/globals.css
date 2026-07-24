@@ -814,6 +814,14 @@ table.tbl tr:hover td { background: #fef3ec; }
   border-radius: 4px;
 }
 
+/* عناوين أقسام القايمة الجانبية */
+.nav-group {
+  color: rgba(255,255,255,.42);
+  font-size: 11px; font-weight: 700; letter-spacing: .5px;
+  padding: 14px 18px 4px;
+}
+.nav-group:first-child { padding-top: 6px; }
+
 /* بادج النواقص في القايمة الجانبية */
 .sidebar nav a { justify-content: space-between; }
 .nav-badge {

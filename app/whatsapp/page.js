@@ -191,21 +191,19 @@ export default function WhatsappPage() {
       </div>
 
       <div className="card">
-        <h3>🛡️ نظام الحماية من الحظر</h3>
-        <p className="muted" style={{ fontSize: 13, marginBottom: 10 }}>
-          البوابة بتطبق القواعد دي تلقائياً — وتقدر تعدلها من ملف الإعدادات بتاعها:
-        </p>
-        <ul style={{ paddingRight: 20, lineHeight: 2, fontSize: 14 }}>
-          <li>⏱️ <b>تأخير عشوائي بين كل رسالة</b> (25–70 ثانية افتراضياً) — محاكاة للإرسال اليدوي.</li>
-          <li>📊 <b>حد أقصى يومي</b> للرسائل (150 افتراضياً) بيتصفر كل يوم.</li>
-          <li>🌙 <b>ساعات عمل</b> — مفيش إرسال بالليل؛ الرسائل بتستنى في الطابور للصبح.</li>
-          <li>✅ <b>فحص الرقم</b> قبل الإرسال — مش بيبعت لأرقام مش على واتساب (الإرسال لأرقام غلط كتير أسرع طريق للحظر).</li>
-          <li>💬 الرسائل <b>معاملات فقط</b> (فاتورة عميل اشترى فعلاً) مش إعلانات جماعية — ودي أهم قاعدة.</li>
-        </ul>
-        <p style={{ marginTop: 10, fontSize: 13 }} className="muted">
-          ⚠️ نصيحة: استخدم رقم مخصص للشغل (مش رقمك الشخصي)، وسخّنه أول أسبوع بإرسال قليل، وبلاش روابط في أول رسالة
-          لعميل جديد. وللأمان الكامل 100% في أي وقت تقدر تستخدم زر wa.me اليدوي — ده بيفتح واتساب العادي ومستحيل يتحظر.
-        </p>
+        <h3>🛡️ الحماية من الحظر <span className="badge green">شغّالة تلقائياً</span></h3>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <span className="badge">⏱️ تأخير بين الرسائل</span>
+          <span className="badge">📊 حد يومي ١٥٠</span>
+          <span className="badge">🌙 مفيش إرسال بالليل</span>
+          <span className="badge">✅ فحص الرقم قبل الإرسال</span>
+        </div>
+        <details style={{ marginTop: 10 }}>
+          <summary className="muted" style={{ cursor: 'pointer', fontSize: 13 }}>نصايح تحميك أكتر</summary>
+          <p className="muted" style={{ fontSize: 13, marginTop: 6 }}>
+            استخدم رقم مخصص للشغل، وابعت قليل أول أسبوع. وزر الواتساب اليدوي آمن ١٠٠٪ في أي وقت.
+          </p>
+        </details>
       </div>
     </div>
   );
