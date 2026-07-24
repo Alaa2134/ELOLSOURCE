@@ -814,9 +814,21 @@ table.tbl tr:hover td { background: #fef3ec; }
   border-radius: 4px;
 }
 
-/* صف الفصال في شاشة البيع — بارز شوية عشان الكاشير يلاقيه بسرعة */
-.pos-totals .haggle-row { background: #fff8f2; border-radius: 8px; padding: 4px 8px; margin: 2px -4px; }
-.pos-totals .haggle-row input { border-color: var(--accent); }
+/* زرار الفصال المخفي — علامة يد باهتة فوق الشمال، شكلها جزء من التصميم */
+.pos-banner { position: relative; }
+.haggle-toggle {
+  position: absolute; top: 6px; left: 8px; z-index: 2;
+  background: transparent !important; border: none !important; box-shadow: none !important;
+  padding: 4px 6px; font-size: 15px; line-height: 1;
+  opacity: .18; filter: grayscale(1);
+  transition: opacity .15s, filter .15s;
+}
+.haggle-toggle:hover { opacity: .5; }
+.haggle-toggle.on { opacity: .9; filter: none; }
+@media print { .haggle-toggle { display: none !important; } }
+
+/* صف الفصال — بيظهر بس لما الكاشير يفتحه، وبشكل عادي مالوش أي لفت نظر */
+.pos-totals .haggle-row input { border-color: var(--line); }
 
 /* شاشة المحاسب المبسّطة — خط وأزرار أكبر عشان تبقى سهلة لأي حد */
 .acc-simple { font-size: 16px; }
