@@ -267,6 +267,23 @@ export default function PosPage() {
     return m > 0 && Number(r.price) > 0 && Number(r.price) < m;
   }
 
+  // الكمية المطلوبة من الصف بالقطعة (العبوة = عدد قطعها)
+  function rowStockQty(r) {
+    const p = products.find((x) => String(x.code) === String(r.code));
+    const q = Number(r.qty) || 0;
+    return r.unit === 'pack' && p && Number(p.packQty) > 0 ? q * Number(p.packQty) : q;
+  }
+  // ناقص مخزون؟ بيرجع { need, have } لو الكمية أكبر من الموجود — وإلا null
+  function shortStock(r) {
+    if (!r.code) return null;
+    const p = products.find((x) => String(x.code) === String(r.code));
+    if (!p) return null;
+    const have = Number(p.stock) || 0;
+    const need = rowStockQty(r);
+    if (need > 0 && need > have) return { need, have, name: p.name };
+    return null;
+  }
+
   // تغيير السعر مع تحذير بصوت لو نزل تحت الحد الأدنى للبيع
   function onPriceChange(i, val) {
     setRows((prev) => {
@@ -391,6 +408,19 @@ export default function PosPage() {
         confirmText: 'أيوة، أكمل البيع',
       });
       if (!okUnder) return;
+    }
+
+    // تحذير: كميات أكبر من المخزون الموجود — تأكيد قبل الحفظ (المخزون هيبقى بالسالب)
+    const short = rows.map((r) => shortStock(r)).filter(Boolean);
+    if (short.length) {
+      warnBeep();
+      const lines = short.map((s) => `• ${s.name}: المخزون ${num(s.have, ar)} — مطلوب ${num(s.need, ar)}`).join('\n');
+      const okShort = await confirmBox({
+        title: '⚠️ الكمية أكبر من المخزون', danger: true, icon: '📦',
+        message: `فيه ${short.length} صنف الكمية فيه أكبر من الموجود:\n${lines}\n\nتكمّل البيع؟ (المخزون هينزل بالسالب)`,
+        confirmText: 'أيوة، أكمل',
+      });
+      if (!okShort) return;
     }
 
     // فحص حد الائتمان قبل البيع الآجل
@@ -751,13 +781,20 @@ export default function PosPage() {
                       </div>
                     </td>
                     <td>
-                      <input
-                        className="num" type="number" min="0" step="any"
-                        data-r={i} data-c="qty"
-                        value={r.qty}
-                        onChange={(e) => updateRow(i, { qty: e.target.value })}
-                        onKeyDown={(e) => onKey(e, i, 'qty')}
-                      />
+                      {(() => {
+                        const sh = shortStock(r);
+                        return (
+                          <input
+                            className={`num ${sh ? 'qty-short' : ''}`}
+                            type="number" min="0" step="any"
+                            data-r={i} data-c="qty"
+                            value={r.qty}
+                            title={sh ? `⚠️ المخزون ${num(sh.have, ar)} بس — إنت طالب ${num(sh.need, ar)}` : ''}
+                            onChange={(e) => updateRow(i, { qty: e.target.value })}
+                            onKeyDown={(e) => onKey(e, i, 'qty')}
+                          />
+                        );
+                      })()}
                     </td>
                     <td>
                       <input
