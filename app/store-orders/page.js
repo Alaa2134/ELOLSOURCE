@@ -2,7 +2,7 @@
 // 📥 طلبات المتجر — الطلبات الجايّة من التجار أونلاين، بتتزامن على كل أجهزة المحل
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { fetchStoreOrders, setStoreOrderStatus, deleteStoreOrder, getSettings, cloudEnabled } from '@/lib/db';
+import { fetchStoreOrders, setStoreOrderStatus, deleteStoreOrder, getSettings, cloudEnabled, cloudTableMissing } from '@/lib/db';
 import { num, fmtDate, fmtTime } from '@/lib/format';
 import { waMeLink } from '@/lib/wa';
 import { dangerBox } from '@/lib/ui';
@@ -14,11 +14,13 @@ export default function StoreOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(null); // id مفتوح للتفاصيل
   const [showAll, setShowAll] = useState(false); // نعرض المنفّذ كمان؟ (افتراضي: الجديد بس)
+  const [tableMissing, setTableMissing] = useState(false); // الجدول لسه متعملش في السحابة
 
   async function reload() {
     setLoading(true);
     setSettings(getSettings());
     setOrders(await fetchStoreOrders());
+    setTableMissing(await cloudTableMissing('store_orders'));
     setLoading(false);
   }
   useEffect(() => { reload(); }, []);
@@ -67,6 +69,20 @@ export default function StoreOrdersPage() {
 
       {!cloudEnabled() && (
         <div className="card"><p className="red-text">⚠️ لازم السحابة تكون متفعّلة عشان تستقبل طلبات المتجر (لوحة الأدمن ← المزامنة الأونلاين).</p></div>
+      )}
+
+      {tableMissing && (
+        <div className="card" style={{ borderRight: '4px solid var(--red)', background: '#fff5f5' }}>
+          <h3 style={{ color: 'var(--red)' }}>⚠️ استقبال الطلبات لسه مش متفعّل</h3>
+          <p>جدول الطلبات لسه متعملش في السحابة — يعني <b>أي طلب التاجر هيبعته مش هيوصلك هنا</b> (هيوصل واتساب بس).</p>
+          <p><b>الحل (دقيقتين، مرة واحدة):</b></p>
+          <ol style={{ marginRight: 18 }}>
+            <li>افتح <b>لوحة الأدمن</b> واضغط <b>«📋 انسخ كود الجداول»</b></li>
+            <li>من Supabase: <b>SQL Editor ← New query</b> ← الصق الكود ← <b>Run</b></li>
+            <li>ارجع هنا واضغط <b>🔄 تحديث</b></li>
+          </ol>
+          <p className="muted" style={{ fontSize: 13 }}>الكود آمن ومتكرر — مش هيلمس أي بيانات موجودة، بس بيضيف الجداول الناقصة.</p>
+        </div>
       )}
 
       <div className="card" style={{ background: '#f4f9f4', borderColor: 'var(--green)' }}>
