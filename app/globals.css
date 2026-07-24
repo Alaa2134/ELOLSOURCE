@@ -805,6 +805,15 @@ table.tbl tr:hover td { background: #fef3ec; }
   border-radius: 4px;
 }
 
+/* كمية أكبر من المخزون الموجود — تنبيه برتقالي */
+.pos-grid td input.qty-short {
+  background: #fff2e0 !important;
+  color: var(--accent-dark);
+  font-weight: 900;
+  box-shadow: inset 0 0 0 2px var(--accent);
+  border-radius: 4px;
+}
+
 /* بادج النواقص في القايمة الجانبية */
 .sidebar nav a { justify-content: space-between; }
 .nav-badge {

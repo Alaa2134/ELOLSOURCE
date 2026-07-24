@@ -13,6 +13,7 @@ export default function StoreOrdersPage() {
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(null); // id مفتوح للتفاصيل
+  const [showAll, setShowAll] = useState(false); // نعرض المنفّذ كمان؟ (افتراضي: الجديد بس)
 
   async function reload() {
     setLoading(true);
@@ -27,6 +28,8 @@ export default function StoreOrdersPage() {
   const cur = settings.currency;
   const isNew = (o) => !o.status || o.status === 'جديد';
   const newCount = orders.filter(isNew).length;
+  const doneCount = orders.length - newCount;
+  const visible = showAll ? orders : orders.filter(isNew); // الجديد بس افتراضياً — الصفحة ماتتكدّسش
   const storeUrl = (settings.publicBaseUrl || (typeof window !== 'undefined' ? window.location.origin : '')) + '/store';
 
   function traderMsg(o) {
@@ -52,7 +55,14 @@ export default function StoreOrdersPage() {
         <h2 style={{ color: 'var(--brand)', margin: 0 }}>
           📥 طلبات المتجر {newCount > 0 && <span className="badge red">{num(newCount, ar)} جديد</span>}
         </h2>
-        <button className="btn-primary" onClick={reload} disabled={loading}>{loading ? '⏳' : '🔄 تحديث'}</button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {doneCount > 0 && (
+            <button onClick={() => setShowAll(!showAll)}>
+              {showAll ? '📥 الجديد بس' : `🗂️ عرض المنفّذ كمان (${num(doneCount, ar)})`}
+            </button>
+          )}
+          <button className="btn-primary" onClick={reload} disabled={loading}>{loading ? '⏳' : '🔄 تحديث'}</button>
+        </div>
       </div>
 
       {!cloudEnabled() && (
@@ -76,7 +86,13 @@ export default function StoreOrdersPage() {
         </p></div>
       )}
 
-      {orders.map((o) => (
+      {!loading && orders.length > 0 && !visible.length && (
+        <div className="card"><p className="muted" style={{ textAlign: 'center', padding: 20 }}>
+          ✅ مفيش طلبات جديدة — كل الطلبات اتنفّذت. اضغط "عرض المنفّذ كمان" تشوف القديم.
+        </p></div>
+      )}
+
+      {visible.map((o) => (
         <div key={o.id} className="card" style={isNew(o) ? { borderRight: '4px solid var(--accent)' } : undefined}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
             <div>
