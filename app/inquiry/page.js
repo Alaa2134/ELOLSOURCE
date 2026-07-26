@@ -12,8 +12,10 @@ import {
   seedIfEmpty,
   cloudConfigFromHash,
   getRole,
+  saveProductsLocal,
+  pricesSyncedAt,
 } from '@/lib/db';
-import { num } from '@/lib/format';
+import { num, fmtDate, fmtTime } from '@/lib/format';
 import BarcodeScanner from '@/components/BarcodeScanner';
 import ImageZoom from '@/components/ImageZoom';
 
@@ -34,6 +36,9 @@ export default function InquiryPage() {
   const [showCount, setShowCount] = useState(30);
   const [inApp, setInApp] = useState(false); // مفتوحة من جوه البرنامج؟ (نعرض زر رجوع)
   const [zoom, setZoom] = useState(null); // الصنف المفتوح بصورته
+  const [online, setOnline] = useState(true);
+  const [syncedAt, setSyncedAt] = useState(null); // آخر تحديث للأسعار
+  const [refreshing, setRefreshing] = useState(false);
 
   // زر الرجوع للبرنامج (بيظهر بس لما تكون مفتوحة من جوه البرنامج مش من موبايل العميل)
   function backToApp() {
@@ -53,18 +58,54 @@ export default function InquiryPage() {
       setAuthed(sessionStorage.getItem('saqqa_inquiry') === '1');
       setInApp(sessionStorage.getItem('saqqa_authed') === '1'); // موظف داخل البرنامج
       setLoading(false);
+      setSyncedAt(pricesSyncedAt());
       // وبعدين نحدّث من السحابة ورا الكواليس لو متاحة (من غير ما نعلّق الصفحة)
-      if (cloudEnabled()) {
-        try {
-          const [s, list] = await Promise.all([fetchSettingsCloud(), fetchProductsCloud()]);
-          if (!alive) return;
-          if (s) setSettings((prev) => ({ ...prev, ...s }));
-          if (list && list.length) setProducts(list);
-        } catch {}
-      }
+      if (cloudEnabled()) await pullPrices(alive);
     })();
     return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // تسخين الكاش: بنبعت للـ service worker كل ملف الصفحة حمّلته فعلاً
+  // عشان أول فتحة من غير نت تلاقي الصفحة وملفاتها كاملة مش الصفحة لوحدها
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    const t = setTimeout(() => {
+      navigator.serviceWorker.ready.then((reg) => {
+        const urls = [
+          ...[...document.querySelectorAll('script[src]')].map((el) => el.src),
+          ...[...document.querySelectorAll('link[rel="stylesheet"]')].map((el) => el.href),
+        ].filter((u) => u.startsWith(location.origin));
+        reg.active?.postMessage({ type: 'warm', urls: [...new Set(urls)] });
+      }).catch(() => {});
+    }, 2500); // بعد ما الصفحة تخلص تحميل
+    return () => clearTimeout(t);
+  }, []);
+
+  // متابعة حالة النت — المندوب لازم يعرف إنه شغال بأسعار متخزنة
+  useEffect(() => {
+    const set = () => setOnline(navigator.onLine);
+    set();
+    window.addEventListener('online', set);
+    window.addEventListener('offline', set);
+    return () => { window.removeEventListener('online', set); window.removeEventListener('offline', set); };
+  }, []);
+
+  // سحب أحدث أسعار وحفظها على الجهاز — من غير الحفظ ده الأوفلاين بيرجع لأسعار قديمة
+  async function pullPrices(alive = true) {
+    setRefreshing(true);
+    try {
+      const [st, list] = await Promise.all([fetchSettingsCloud(), fetchProductsCloud()]);
+      if (!alive) return;
+      if (st) setSettings((prev) => ({ ...prev, ...st }));
+      if (list && list.length) {
+        setProducts(list);
+        saveProductsLocal(list);
+        setSyncedAt(pricesSyncedAt());
+      }
+    } catch {}
+    if (alive) setRefreshing(false);
+  }
 
   const allFiltered = useMemo(() => {
     if (!q.trim()) return products;
@@ -160,12 +201,22 @@ export default function InquiryPage() {
             onClose={() => setScanning(false)}
           />
         )}
-        <p className="muted" style={{ margin: '8px 2px', fontSize: 13 }}>
-          {q
-            ? `${num(allFiltered.length, ar)} نتيجة`
-            : `إجمالي الأصناف: ${num(allFiltered.length, ar)} — معروض ${num(filtered.length, ar)}، ابحث توصل لأي صنف فوراً`}
-          {!cloudEnabled() && ' · 💾 بيانات الجهاز المحلي'}
-        </p>
+        <div className="inq-status">
+          <span className="muted">
+            {q ? `${num(allFiltered.length, ar)} نتيجة` : `${num(allFiltered.length, ar)} صنف`}
+          </span>
+          {!online && <span className="badge orange">📴 من غير نت — الأسعار المتخزنة</span>}
+          {syncedAt && (
+            <span className="muted" style={{ fontSize: 12 }}>
+              آخر تحديث: {fmtDate(syncedAt, ar)} {fmtTime(syncedAt, ar)}
+            </span>
+          )}
+          {cloudEnabled() && (
+            <button className="btn-sm" disabled={refreshing || !online} onClick={() => pullPrices(true)}>
+              {refreshing ? '⏳' : '🔄'} حدّث الأسعار
+            </button>
+          )}
+        </div>
         {filtered.map((p) => (
           <div className="inquiry-item" key={p.id} onClick={() => setZoom(p)} role="button" tabIndex={0}>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
