@@ -1,5 +1,5 @@
 'use client';
-// 📥 طلبات المتجر — الطلبات الجايّة من التجار أونلاين، بتتزامن على كل أجهزة المحل
+// 📥 طلبات الفواتير — الطلبات الجايّة من التجار أونلاين، بتتزامن على كل أجهزة المحل
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { fetchStoreOrders, setStoreOrderStatus, deleteStoreOrder, getSettings, cloudEnabled, cloudTableMissing } from '@/lib/db';
@@ -55,7 +55,7 @@ export default function StoreOrdersPage() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
         <h2 style={{ color: 'var(--brand)', margin: 0 }}>
-          📥 طلبات المتجر {newCount > 0 && <span className="badge red">{num(newCount, ar)} جديد</span>}
+          📥 طلبات الفواتير {newCount > 0 && <span className="badge red">{num(newCount, ar)} جديد</span>}
         </h2>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {doneCount > 0 && (
@@ -112,9 +112,14 @@ export default function StoreOrdersPage() {
         <div key={o.id} className="card" style={isNew(o) ? { borderRight: '4px solid var(--accent)' } : undefined}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
             <div>
-              <b style={{ fontSize: 16 }}>🧑‍💼 {o.trader?.name || 'تاجر'}</b>
+              <b style={{ fontSize: 16 }}>{o.source === 'مندوب' ? '🛵' : '🧑‍💼'} {o.trader?.name || 'تاجر'}</b>
               {isNew(o) ? <span className="badge red" style={{ marginRight: 8 }}>جديد</span>
                 : <span className="badge green" style={{ marginRight: 8 }}>{o.status}</span>}
+              {o.source === 'مندوب' && (
+                <span className="badge blue" style={{ marginRight: 6 }}>
+                  من المندوب{o.rep ? ` ${o.rep}` : ''}
+                </span>
+              )}
               <div className="muted" style={{ fontSize: 13 }} dir="ltr">{o.trader?.phone} · {fmtDate(o.createdAt, ar)} {fmtTime(o.createdAt, ar)}</div>
             </div>
             <div style={{ textAlign: 'left' }}>

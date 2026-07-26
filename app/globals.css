@@ -1249,3 +1249,120 @@ input, select, textarea { transition: border-color .15s, box-shadow .15s; }
   margin-right: auto;
 }
 .inq-status button:disabled { opacity: .45; }
+
+/* ============ أخذ الطلبات في تطبيق المندوب ============ */
+/* شريط العميل اللي المندوب واقف عنده */
+.rep-cust {
+  width: 100%;
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.2);
+  color: #fff;
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  text-align: right;
+  font-size: 14px;
+}
+.rep-cust.on { background: rgba(242,106,27,.2); border-color: var(--accent); }
+.rep-cust b { display: block; }
+.rep-cust small { display: block; color: #cbd5e1; font-size: 12px; font-weight: 600; }
+.rep-cust-x { margin-right: auto; color: #cbd5e1; font-size: 12px; }
+
+/* زرار + على كل صنف */
+.i-add {
+  width: 42px; height: 42px; flex-shrink: 0;
+  border-radius: 12px;
+  background: var(--accent); color: #fff;
+  border: 0;
+  font-size: 20px; font-weight: 900;
+  padding: 0;
+}
+.i-add.on { background: var(--green); font-size: 16px; }
+
+/* شريط السلة الثابت تحت الشاشة */
+.cart-bar {
+  position: fixed; bottom: 0; right: 0; left: 0; z-index: 90;
+  display: flex; align-items: center; gap: 12px;
+  background: var(--accent); color: #fff;
+  border: 0; border-radius: 0;
+  padding: 14px 18px;
+  font-size: 16px;
+  box-shadow: 0 -4px 18px rgba(0,0,0,.35);
+}
+.cart-bar .cart-n { font-weight: 900; }
+.cart-bar .cart-go { margin-right: auto; font-size: 14px; }
+
+/* شيت منزلق من تحت (اختيار العميل / مراجعة الطلب) */
+.sheet-overlay {
+  position: fixed; inset: 0; z-index: 150;
+  background: rgba(4, 9, 15, .72);
+  display: flex; align-items: flex-end;
+}
+.sheet {
+  width: 100%; max-height: 88vh;
+  background: var(--brand-dark);
+  border-radius: 18px 18px 0 0;
+  padding: 14px;
+  display: flex; flex-direction: column; gap: 10px;
+  color: #fff;
+}
+.sheet-head { display: flex; align-items: center; justify-content: space-between; font-size: 16px; }
+.sheet-head button {
+  background: rgba(255,255,255,.12); border: 0; color: #fff;
+  border-radius: 9px; padding: 6px 12px;
+}
+.sheet-list { overflow-y: auto; flex: 1; min-height: 60px; display: flex; flex-direction: column; gap: 6px; }
+.sheet-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: rgba(255,255,255,.07);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 10px; padding: 10px 12px;
+  color: #fff; text-align: right; font-size: 14px;
+}
+.sheet-row small { display: block; color: #b6c4d4; font-size: 12px; font-weight: 600; }
+.sheet-new { width: 100%; justify-content: center; font-size: 16px; padding: 13px; }
+.sheet-clear { width: 100%; justify-content: center; background: transparent; border: 0; color: #f0a5a5; font-size: 13px; }
+.sheet-total {
+  display: flex; justify-content: space-between; align-items: center;
+  border-top: 1px solid rgba(255,255,255,.16);
+  padding-top: 10px; font-size: 17px;
+}
+.sheet-total b { color: var(--accent); font-size: 21px; }
+
+/* سطر في مراجعة الطلب */
+.cart-row {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(255,255,255,.06);
+  border-radius: 10px; padding: 8px 10px;
+}
+.cart-name { flex: 1; min-width: 0; font-size: 14px; }
+.cart-name small { display: block; color: #b6c4d4; font-size: 12px; }
+.qty-box { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.qty-box button {
+  width: 34px; height: 34px; padding: 0;
+  background: rgba(255,255,255,.14); border: 0; color: #fff;
+  border-radius: 8px; font-size: 19px; font-weight: 900;
+}
+.qty-box input {
+  width: 52px; text-align: center; padding: 6px 2px;
+  background: rgba(0,0,0,.28); border: 1px solid rgba(255,255,255,.18);
+  color: #fff; border-radius: 8px; font-weight: 800;
+}
+
+/* زرار الإضافة من جوه شاشة الصورة */
+.zoom-add {
+  background: var(--accent); color: #fff; border: 0;
+  border-radius: 10px; padding: 9px 16px; font-size: 14px; font-weight: 800;
+  margin-right: auto;
+}
+
+/* رسالة بعد الإرسال */
+.rep-toast {
+  position: fixed; bottom: 74px; right: 12px; left: 12px; z-index: 95;
+  background: var(--green); color: #fff;
+  border-radius: 12px; padding: 12px 16px;
+  font-size: 14px; font-weight: 700; text-align: center;
+  box-shadow: 0 6px 20px rgba(0,0,0,.4);
+}
+.rep-toast.warn { background: var(--accent-dark); }
