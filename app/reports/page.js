@@ -160,21 +160,30 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      <div className="card">
-        <h3>📈 اتجاه المبيعات (آخر ١٢ شهر)</h3>
-        <TrendLine data={monthly} fmt={(n) => num(Math.round(n), ar)} />
-      </div>
+      {monthly.length >= 2 && (
+        <div className="card">
+          <h3>📈 اتجاه المبيعات (آخر ١٢ شهر)</h3>
+          <TrendLine data={monthly} fmt={(n) => num(Math.round(n), ar)} />
+        </div>
+      )}
 
-      <div className="grid cols-2">
-        <div className="card">
-          <h3>📊 المبيعات باليوم (خلال الفترة)</h3>
-          <BarsChart data={stats.byDay.map(([k, v]) => ({ label: fmtDate(k, ar).slice(0, 5), value: v.total }))} fmt={(n) => num(Math.round(n), ar)} />
+      {/* الرسوم بتظهر بس لما يبقى فيها كذا عمود يستاهل المقارنة */}
+      {(stats.byDay.length >= 2 || stats.topProfit.length >= 2) && (
+        <div className="grid cols-2">
+          {stats.byDay.length >= 2 && (
+            <div className="card">
+              <h3>📊 المبيعات باليوم (خلال الفترة)</h3>
+              <BarsChart data={stats.byDay.map(([k, v]) => ({ label: fmtDate(k, ar).slice(0, 5), value: v.total }))} fmt={(n) => num(Math.round(n), ar)} />
+            </div>
+          )}
+          {stats.topProfit.length >= 2 && (
+            <div className="card">
+              <h3>💰 أكثر الأصناف ربحاً</h3>
+              <BarsChart data={stats.topProfit.map((it) => ({ label: it.name.slice(0, 10), value: it.profit, color: 'var(--green)' }))} fmt={(n) => num(Math.round(n), ar)} />
+            </div>
+          )}
         </div>
-        <div className="card">
-          <h3>💰 أكثر الأصناف ربحاً</h3>
-          <BarsChart data={stats.topProfit.map((it) => ({ label: it.name.slice(0, 10), value: it.profit, color: 'var(--green)' }))} fmt={(n) => num(Math.round(n), ar)} />
-        </div>
-      </div>
+      )}
 
       {stats.byCashier.length > 1 && (
         <div className="card">

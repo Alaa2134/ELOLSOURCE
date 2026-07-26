@@ -283,7 +283,7 @@ export default function OrderPage() {
                 </td>
               </tr>
             ))}
-            {!orders.length && <tr><td colSpan={6} className="muted">مفيش طلبات بضاعة بعد — اعمل أول طلب من فوق ⬆</td></tr>}
+            {!orders.length && <tr><td colSpan={6} className="muted">لسه مفيش طلبات بضاعة</td></tr>}
           </tbody>
         </table>
       </div>

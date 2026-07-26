@@ -120,7 +120,7 @@ export default function QuotesPage() {
       )}
 
       <div className="card">
-        <h3>📝 عرض سعر جديد <small className="muted">— بيتبعت للعميل ويتحوّل لفاتورة بضغطة</small></h3>
+        <h3>📝 عرض سعر جديد</h3>
         <div className="grid cols-3" style={{ marginBottom: 12 }}>
           <label className="field"><span>العميل</span>
             <input list="q-cust" value={custName} onChange={(e) => {
@@ -182,7 +182,7 @@ export default function QuotesPage() {
                 </td>
               </tr>
             ))}
-            {!quotes.length && <tr><td colSpan={7} className="muted">مفيش عروض أسعار بعد — اعمل أول عرض من فوق ⬆</td></tr>}
+            {!quotes.length && <tr><td colSpan={7} className="muted">لسه مفيش عروض أسعار</td></tr>}
           </tbody>
         </table>
       </div>

@@ -128,8 +128,7 @@ export default function InsightsPage() {
       <div className="grid cols-2" style={{ alignItems: 'start' }}>
         {/* 🟢 نجوم الربح */}
         <div className="card">
-          <h3>🟢 نجوم الربح — الأصناف اللي بتكسّبك أكتر</h3>
-          <p className="muted" style={{ marginTop: 0 }}>ركّز عليها في العرض والتوفير — دي اللي بتجيب الفلوس.</p>
+          <h3>🟢 نجوم الربح — أكتر أصناف بتكسّبك</h3>
           <table className="tbl">
             <thead><tr><th>الصنف</th><th>الكمية المباعة</th><th>ربح</th></tr></thead>
             <tbody>
@@ -183,7 +182,7 @@ export default function InsightsPage() {
       {/* 🟠 فلوس واقفة */}
       {ins.dead.length > 0 && (
         <div className="card" style={{ borderRight: '4px solid var(--accent)' }}>
-          <h3>🟠 فلوس واقفة في مخزون راكد <small className="muted">— اعملها عرض/تخفيض تحرّك فلوسك ({money(ins.deadTotal)})</small></h3>
+          <h3>🟠 فلوس واقفة في مخزون راكد <small className="muted">({money(ins.deadTotal)})</small></h3>
           <table className="tbl">
             <thead><tr><th>الصنف</th><th>المورد</th><th>المخزون</th><th>فلوس واقفة</th></tr></thead>
             <tbody>

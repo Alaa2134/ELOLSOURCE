@@ -57,6 +57,8 @@ export default function ProductsPage() {
   const [showCount, setShowCount] = useState(150);
   const [progress, setProgress] = useState(null); // { done, total, label } — عداد الاستيراد
   const [selected, setSelected] = useState(() => new Set()); // الأصناف المحددة للمسح
+  const [showForm, setShowForm] = useState(false); // فورم إضافة صنف — مقفول عشان الجدول يبان
+  const [showTools, setShowTools] = useState(false); // أدوات الاستيراد والتصدير
   const [editCell, setEditCell] = useState(null); // { id, field } — تعديل سريع بالضغط المزدوج
   const [editVal, setEditVal] = useState('');
   const pdfRef = useRef(null);
@@ -319,10 +321,17 @@ export default function ProductsPage() {
     a.click();
   }
 
+  // الفورم بيفتح لوحده وانت بتعدّل صنف
+  const formOpen = showForm || !!form.id;
+
   return (
     <div>
+      {formOpen && (
       <div className="card">
-        <h3>{form.id ? '✏️ تعديل صنف' : '➕ إضافة صنف جديد'}</h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+          <h3 style={{ margin: 0, border: 0, padding: 0 }}>{form.id ? '✏️ تعديل صنف' : '➕ إضافة صنف جديد'}</h3>
+          <button className="btn-sm" onClick={() => { setForm(empty); setShowForm(false); }}>✕ اقفل</button>
+        </div>
         <form onSubmit={submit} className="grid cols-4" style={{ alignItems: 'end' }}>
           <label className="field"><span>رقم الصنف (الكود)</span>
             <input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} /></label>
@@ -366,15 +375,32 @@ export default function ProductsPage() {
             {form.id && <button type="button" onClick={() => setForm(empty)}>إلغاء</button>}
           </div>
         </form>
-        {msg && <p style={{ marginTop: 8 }}>{msg}</p>}
       </div>
+      )}
 
       <div className="card">
+        {msg && <p className="save-flash-inline">{msg}</p>}
         <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           <input style={{ maxWidth: 300 }} placeholder="🔍 بحث بالاسم أو الكود أو الباركود" value={qInput} onChange={(e) => setQInput(e.target.value)} />
           <span className="muted">{num(allFiltered.length, ar)} صنف{allFiltered.length > filtered.length ? ` (معروض ${num(filtered.length, ar)})` : ''}</span>
           <span className="badge blue" title="اضغط ضغطتين على أي خانة في الجدول (الكود/الاسم/المورد/الأسعار/المخزون) عشان تعدلها على طول">✎ دوس مرتين على أي خانة تعدّلها</span>
-          <div style={{ marginRight: 'auto', display: 'flex', gap: 8 }}>
+          <div style={{ marginRight: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {/* الأدوات اللي بتتستخدم مرة في العمر مخبّية — الجدول أهم */}
+            <button className="btn-accent" onClick={() => { setForm(empty); setShowForm(true); }}>➕ صنف جديد</button>
+            <button title="تحديد كل نتايج البحث الحالية" onClick={() => toggleSelectAll(allFiltered)}>
+              {selected.size === allFiltered.length && allFiltered.length ? '⬜ إلغاء التحديد' : '☑️ تحديد الكل'}
+            </button>
+            {selected.size > 0 && (
+              <button className="btn-red" onClick={deleteSelected}>
+                🗑️ مسح {num(selected.size, settings?.arabicDigits)}
+              </button>
+            )}
+            <button onClick={() => setShowTools(!showTools)}>🛠️ أدوات {showTools ? '▲' : '▼'}</button>
+          </div>
+        </div>
+
+        {showTools && (
+          <div className="tools-bar">
             <button className="btn-accent" onClick={() => pdfRef.current?.click()} disabled={pdfBusy}>
               {pdfBusy ? '⏳ جاري التحليل...' : '📄 استيراد من PDF'}
             </button>
@@ -382,14 +408,8 @@ export default function ProductsPage() {
             <button onClick={() => setShowImport(!showImport)}>📥 استيراد من إكسل</button>
             <button onClick={exportCsv}>📤 تصدير CSV</button>
             <button title="سعر النقدي = سعر البيع + نسبة تحددها" onClick={fillRetailPrices}>🏷️ تعبئة سعر النقدي</button>
-            <button title="تحديد كل نتايج البحث الحالية" onClick={() => toggleSelectAll(allFiltered)}>
-              {selected.size === allFiltered.length && allFiltered.length ? '⬜ إلغاء التحديد' : '☑️ تحديد الكل'}
-            </button>
-            <button className="btn-red" title="مسح الأصناف المعلَّم عليها (للأدمن)" onClick={deleteSelected}>
-              🗑️ مسح المحدد{selected.size ? ` (${num(selected.size, settings?.arabicDigits)})` : ''}
-            </button>
           </div>
-        </div>
+        )}
 
         {progress && (
           <div style={{ marginBottom: 12, background: '#fff8f2', border: '1px solid var(--accent)', padding: 14, borderRadius: 8 }}>
