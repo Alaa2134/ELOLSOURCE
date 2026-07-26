@@ -16,8 +16,13 @@ import {
   pricesSyncedAt,
   listCustomers,
   sendRepOrder,
+  sendRepCollection,
   flushRepOrders,
   listPendingRepOrders,
+  fetchCustomersCloud,
+  saveCustomersLocal,
+  fetchCustomerAccountCloud,
+  customerAccountLocal,
 } from '@/lib/db';
 import { num, fmtDate, fmtTime } from '@/lib/format';
 import BarcodeScanner from '@/components/BarcodeScanner';
@@ -54,6 +59,12 @@ export default function InquiryPage() {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(null);      // رسالة بعد الإرسال
   const [pending, setPending] = useState(0);   // طلبات مستنية النت
+  const [repName, setRepName] = useState('');  // المندوب اللي داخل بكوده
+  const [fav, setFav] = useState([]);          // أكواد الأصناف المفضّلة
+  const [favOnly, setFavOnly] = useState(false);
+  const [account, setAccount] = useState(null); // كشف حساب العميل المفتوح
+  const [accLoading, setAccLoading] = useState(false);
+  const [collect, setCollect] = useState(null); // { amount, notes } — تسجيل تحصيل
 
   // زر الرجوع للبرنامج (بيظهر بس لما تكون مفتوحة من جوه البرنامج مش من موبايل العميل)
   function backToApp() {
@@ -72,6 +83,8 @@ export default function InquiryPage() {
       setProducts(listProducts());
       setCustomers(listCustomers());
       setPending(listPendingRepOrders().length);
+      setRepName(sessionStorage.getItem('saqqa_rep_name') || '');
+      try { setFav(JSON.parse(localStorage.getItem('saqqa_rep_fav') || '[]')); } catch {}
       setAuthed(sessionStorage.getItem('saqqa_inquiry') === '1');
       setInApp(sessionStorage.getItem('saqqa_authed') === '1'); // موظف داخل البرنامج
       setLoading(false);
@@ -154,7 +167,7 @@ export default function InquiryPage() {
     const order = {
       trader: { name: cust.name, phone: cust.phone || '' },
       source: 'مندوب',
-      rep: (localStorage.getItem('saqqa_rep_name') || '').trim(),
+      rep: repName,
       notes: notes.trim(),
       items: cartRows.map((r) => ({
         code: r.p.code, name: r.p.name, qty: r.qty, price: priceOf(r.p), total: r.line,
@@ -194,6 +207,9 @@ export default function InquiryPage() {
         saveProductsLocal(list);
         setSyncedAt(pricesSyncedAt());
       }
+      // العملاء كمان — من غيرهم المندوب مش هيلاقي مين يختار
+      const cl = await fetchCustomersCloud();
+      if (alive && cl && cl.length) { setCustomers(cl); saveCustomersLocal(cl); }
     } catch {}
     if (alive) setRefreshing(false);
   }
@@ -210,7 +226,8 @@ export default function InquiryPage() {
       return words.every((w) => hay.includes(w));
     });
   }, [q, products]);
-  const filtered = allFiltered.slice(0, showCount);
+  const favFiltered = favOnly ? allFiltered.filter((p) => fav.includes(String(p.code))) : allFiltered;
+  const filtered = favFiltered.slice(0, showCount);
 
   if (loading) return <p style={{ padding: 40, textAlign: 'center' }}>جاري التحميل...</p>;
 
@@ -218,13 +235,76 @@ export default function InquiryPage() {
 
   function login(e) {
     e.preventDefault();
-    if (pass === (settings.inquiryPassword || '261179')) {
+    const code = pass.trim();
+    // كود مندوب؟ يدخل باسمه — والطلبات والتحصيل بيوصلوا منسوبين ليه
+    const rep = (settings.repUsers || []).find((r) => r.code && r.code === code && r.name);
+    if (rep) {
       sessionStorage.setItem('saqqa_inquiry', '1');
+      sessionStorage.setItem('saqqa_rep_name', rep.name);
+      setRepName(rep.name);
       setAuthed(true);
-    } else {
-      setErr('كلمة السر غير صحيحة');
-      setPass('');
+      return;
     }
+    if (code === (settings.inquiryPassword || '261179')) {
+      sessionStorage.setItem('saqqa_inquiry', '1');
+      sessionStorage.removeItem('saqqa_rep_name');
+      setRepName('');
+      setAuthed(true);
+      return;
+    }
+    setErr('الكود غلط');
+    setPass('');
+  }
+
+  // 💬 يبعت الصنف للتاجر — الصورة كمان لو الموبايل بيدعم المشاركة بملفات
+  async function shareProduct(p) {
+    const txt = `${p.name}\nكود ${p.code}\nالسعر: ${num(priceOf(p), ar)} ${settings.currency}\n${settings.companyName}`;
+    try {
+      if (p.image && navigator.canShare) {
+        const blob = await (await fetch(p.image)).blob();
+        const file = new File([blob], `${p.code}.png`, { type: blob.type || 'image/png' });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], text: txt });
+          return;
+        }
+      }
+      if (navigator.share) { await navigator.share({ text: txt }); return; }
+    } catch { /* الغى المشاركة أو المتصفح مش بيدعم — نرجع لواتساب */ }
+    window.open(`https://wa.me/?text=${encodeURIComponent(txt)}`, '_blank');
+  }
+
+  // ⭐ المفضّلة — الأصناف اللي المندوب بيبيعها كتير
+  function toggleFav(code) {
+    setFav((prev) => {
+      const next = prev.includes(String(code)) ? prev.filter((c) => c !== String(code)) : [...prev, String(code)];
+      try { localStorage.setItem('saqqa_rep_fav', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }
+
+  // 📄 كشف حساب العميل — من السحابة لو فيه نت، وإلا من بيانات الجهاز
+  async function openAccount() {
+    if (!cust?.name) return;
+    setAccLoading(true);
+    setAccount({ name: cust.name, loading: true });
+    const acc = (online && (await fetchCustomerAccountCloud(cust.name))) || customerAccountLocal(cust.name);
+    setAccount(acc);
+    setAccLoading(false);
+  }
+
+  // 💵 تسجيل تحصيل — بيروح للكاشير يعتمده، المندوب مابيكتبش في الدفاتر
+  async function submitCollection() {
+    const amount = Number(collect?.amount) || 0;
+    if (!(amount > 0) || !cust?.name) return;
+    setSending(true);
+    const res = await sendRepCollection({ customer: cust, amount, notes: collect.notes || '', rep: repName });
+    setSending(false);
+    setCollect(null);
+    setPending(listPendingRepOrders().length);
+    setSent(res.sent
+      ? `✅ اتسجّل تحصيل ${num(amount, ar)} من ${cust.name} — راح للكاشير`
+      : `📥 التحصيل اتحفظ وهيتبعت أول ما النت يرجع`);
+    setTimeout(() => setSent(null), 6000);
   }
 
   if (!authed) {
@@ -255,7 +335,7 @@ export default function InquiryPage() {
         <img src="/logo.jpg" alt="ALSAKA" />
         <div>
           <h2>{settings.companyName}</h2>
-          <small>استعلام الأسعار</small>
+          <small>{repName ? `🛵 ${repName}` : 'استعلام الأسعار'}</small>
         </div>
         <div style={{ marginRight: 'auto', display: 'flex', gap: 6 }}>
           {inApp && (
@@ -281,6 +361,13 @@ export default function InquiryPage() {
           <span className="rep-cust-x">{cust ? 'غيّر' : '▼'}</span>
         </button>
 
+        {cust && repName && (
+          <div className="rep-actions">
+            <button onClick={openAccount}>📄 كشف حسابه</button>
+            <button onClick={() => setCollect({ amount: '', notes: '' })}>💵 سجّل تحصيل</button>
+          </div>
+        )}
+
         <div style={{ display: 'flex', gap: 8 }}>
           <input
             className="inquiry-search"
@@ -291,16 +378,23 @@ export default function InquiryPage() {
             autoFocus
           />
           <button className="btn-accent" style={{ borderRadius: 12, fontSize: 22, padding: '0 16px' }}
-            title="مسح الباركود بالكاميرا" onClick={() => setScanning(true)}>
+            title="صوّر الباركود" onClick={() => setScanning(true)}>
             📷
           </button>
         </div>
         {scanning && (
           <BarcodeScanner
             onScan={(code) => {
-              // نبحث بالباركود أو الكود ونعرض النتيجة فوراً
               const p = products.find((x) => String(x.barcode || '') === code || String(x.code) === code);
-              setQ(p ? String(p.code) : code);
+              if (p) {
+                setQ(String(p.code));
+                setScanning(false);
+                setZoom(p); // بيفتح الصنف بصورته وسعره على طول
+              } else {
+                setQ(code);
+                setSent(`⚠️ الباركود ده مش متسجل: ${code}`);
+                setTimeout(() => setSent(null), 4000);
+              }
             }}
             onClose={() => setScanning(false)}
           />
@@ -314,6 +408,11 @@ export default function InquiryPage() {
             <span className="muted" style={{ fontSize: 12 }}>
               آخر تحديث: {fmtDate(syncedAt, ar)} {fmtTime(syncedAt, ar)}
             </span>
+          )}
+          {fav.length > 0 && (
+            <button className={`fav-chip ${favOnly ? 'on' : ''}`} onClick={() => { setFavOnly(!favOnly); setShowCount(30); }}>
+              ⭐ المفضّلة {num(fav.length, ar)}
+            </button>
           )}
           {cloudEnabled() && (
             <button className="btn-sm" disabled={refreshing || !online} onClick={() => pullPrices(true)}>
@@ -343,6 +442,13 @@ export default function InquiryPage() {
               </div>
               {/* + بيضيف الصنف للطلب — الدوسة مبتفتحش الصورة */}
               <button
+                className={`i-fav ${fav.includes(String(p.code)) ? 'on' : ''}`}
+                onClick={(e) => { e.stopPropagation(); toggleFav(p.code); }}
+                aria-label="مفضّلة"
+              >
+                {fav.includes(String(p.code)) ? '⭐' : '☆'}
+              </button>
+              <button
                 className={`i-add ${cart[p.code] ? 'on' : ''}`}
                 onClick={(e) => { e.stopPropagation(); addToCart(p); }}
                 aria-label={`ضيف ${p.name} للطلب`}
@@ -353,10 +459,10 @@ export default function InquiryPage() {
           </div>
         ))}
         {!filtered.length && <p className="muted" style={{ textAlign: 'center', padding: 30 }}>مفيش نتائج 🔍</p>}
-        {allFiltered.length > filtered.length && (
+        {favFiltered.length > filtered.length && (
           <button className="btn-accent" style={{ width: '100%', justifyContent: 'center', marginTop: 8 }}
             onClick={() => setShowCount(showCount + 100)}>
-            ⬇️ عرض المزيد ({num(allFiltered.length - filtered.length, ar)} صنف كمان)
+            ⬇️ عرض المزيد ({num(favFiltered.length - filtered.length, ar)} صنف كمان)
           </button>
         )}
       </div>
@@ -373,6 +479,91 @@ export default function InquiryPage() {
       {sent && <div className="rep-toast">{sent}</div>}
       {pending > 0 && !sent && (
         <div className="rep-toast warn">📥 {num(pending, ar)} طلب مستني النت</div>
+      )}
+
+      {/* 📄 كشف حساب العميل */}
+      {account && (
+        <div className="sheet-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setAccount(null); }}>
+          <div className="sheet">
+            <div className="sheet-head">
+              <b>📄 حساب {account.name}</b>
+              <button onClick={() => setAccount(null)}>✕</button>
+            </div>
+            {accLoading ? <p className="muted" style={{ padding: 20, textAlign: 'center' }}>⏳ بنجيب الحساب...</p> : (
+              <>
+                <div className="acc-top">
+                  <div>
+                    <small>عليه دلوقتي</small>
+                    <b className={account.debt > 0 ? 'red-text' : 'green-text'}>
+                      {num(account.debt, ar)} {settings.currency}
+                    </b>
+                  </div>
+                  <div>
+                    <small>إجمالي اللي اشتراه</small>
+                    <b>{num(account.totalBought, ar)}</b>
+                  </div>
+                </div>
+                {account.lastPayment && (
+                  <p className="muted" style={{ fontSize: 13 }}>
+                    آخر دفعة: {num(account.lastPayment.amount, ar)} {settings.currency} يوم {fmtDate(account.lastPayment.date, ar)}
+                  </p>
+                )}
+                <div className="sheet-list">
+                  {account.invoices.slice(0, 25).map((r) => (
+                    <div key={r.id} className="acc-inv">
+                      <span>
+                        <b>فاتورة {num(r.number, ar)}</b>
+                        <small>{fmtDate(r.date, ar)} · {num(r.items, ar)} صنف</small>
+                      </span>
+                      <span style={{ textAlign: 'left' }}>
+                        <b>{num(r.net, ar)}</b>
+                        {r.remaining > 0
+                          ? <small className="red-text">باقي {num(r.remaining, ar)}</small>
+                          : <small className="green-text">مدفوعة</small>}
+                      </span>
+                    </div>
+                  ))}
+                  {!account.invoices.length && (
+                    <p className="muted" style={{ padding: 16, textAlign: 'center' }}>
+                      {online ? 'مفيش فواتير للعميل ده' : 'مفيش نت — والفواتير مش متخزنة على الموبايل'}
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 💵 تسجيل تحصيل */}
+      {collect && (
+        <div className="sheet-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setCollect(null); }}>
+          <div className="sheet">
+            <div className="sheet-head">
+              <b>💵 تحصيل من {cust?.name}</b>
+              <button onClick={() => setCollect(null)}>✕</button>
+            </div>
+            <label className="rep-field">
+              <span>المبلغ اللي استلمته</span>
+              <input
+                type="number" inputMode="decimal" min="0" step="any" autoFocus
+                value={collect.amount}
+                onChange={(e) => setCollect({ ...collect, amount: e.target.value })}
+              />
+            </label>
+            <input
+              className="inquiry-search" placeholder="ملاحظات (اختياري)..."
+              value={collect.notes}
+              onChange={(e) => setCollect({ ...collect, notes: e.target.value })}
+            />
+            <p className="muted" style={{ fontSize: 12 }}>
+              التحصيل بيروح للكاشير يعتمده ويعمل سند القبض — عشان الدفاتر تفضل مظبوطة.
+            </p>
+            <button className="btn-accent sheet-new" disabled={sending || !(Number(collect.amount) > 0)} onClick={submitCollection}>
+              {sending ? '⏳ بيتبعت...' : online ? '📤 ابعت التحصيل للكاشير' : '📥 احفظه (هيتبعت لما النت يرجع)'}
+            </button>
+          </div>
+        </div>
       )}
 
       {/* اختيار العميل */}
@@ -475,6 +666,7 @@ export default function InquiryPage() {
                   {(Number(zoom.stock) || 0) > 0 ? `متوفر ${num(zoom.stock, ar)}` : 'نافد'}
                 </span>
               )}
+              <button className="zoom-wa" onClick={() => shareProduct(zoom)}>💬 ابعته</button>
               <button className="zoom-add" onClick={() => addToCart(zoom)}>
                 ➕ ضيفه للطلب{cart[zoom.code] ? ` (${num(cart[zoom.code], ar)})` : ''}
               </button>

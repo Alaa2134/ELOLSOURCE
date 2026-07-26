@@ -1366,3 +1366,59 @@ input, select, textarea { transition: border-color .15s, box-shadow .15s; }
   box-shadow: 0 6px 20px rgba(0,0,0,.4);
 }
 .rep-toast.warn { background: var(--accent-dark); }
+
+/* أزرار العميل في تطبيق المندوب (كشف حساب + تحصيل) */
+.rep-actions { display: flex; gap: 8px; margin-bottom: 8px; }
+.rep-actions button {
+  flex: 1;
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.22);
+  color: #fff;
+  border-radius: 11px;
+  padding: 10px;
+  font-size: 14px;
+  justify-content: center;
+}
+
+/* نجمة المفضّلة على الصنف */
+.i-fav {
+  width: 34px; height: 42px; flex-shrink: 0;
+  background: transparent; border: 0; padding: 0;
+  font-size: 20px; color: var(--accent);
+}
+.i-fav.on { color: var(--gold); }
+.fav-chip {
+  background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.22);
+  color: #fff; border-radius: 20px; padding: 4px 12px; font-size: 12px;
+}
+.fav-chip.on { background: var(--accent); border-color: var(--accent); }
+
+/* كشف حساب العميل */
+.acc-top { display: flex; gap: 10px; }
+.acc-top > div {
+  flex: 1; background: rgba(255,255,255,.07); border-radius: 11px; padding: 10px 12px;
+}
+.acc-top small { display: block; color: #b6c4d4; font-size: 12px; margin-bottom: 3px; }
+.acc-top b { font-size: 20px; }
+.acc-inv {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  background: rgba(255,255,255,.06); border-radius: 10px; padding: 9px 12px; font-size: 14px;
+}
+.acc-inv small { display: block; font-size: 12px; color: #b6c4d4; font-weight: 600; }
+
+/* خانة إدخال جوه الشيت */
+.rep-field { display: block; }
+.rep-field span { display: block; font-size: 13px; color: #b6c4d4; margin-bottom: 5px; }
+.rep-field input {
+  width: 100%; font-size: 26px; font-weight: 900; text-align: center;
+  padding: 12px; border-radius: 11px;
+  background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.2); color: #fff;
+}
+
+/* زرار إرسال الصنف من شاشة الصورة */
+.zoom-wa {
+  background: var(--green); color: #fff; border: 0;
+  border-radius: 10px; padding: 9px 14px; font-size: 14px; font-weight: 800;
+  margin-right: auto;
+}
+.zoom-wa + .zoom-add { margin-right: 8px; }
