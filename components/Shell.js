@@ -35,6 +35,7 @@ const NAV = [
   // — المخزون —
   { href: '/products', label: '📦 الأصناف والمخزون', title: 'الأصناف والمخزون', roles: ['admin', 'cashier'], group: 'المخزون' },
   { href: '/lowstock', label: '📉 النواقص', title: 'النواقص', roles: ['admin', 'cashier', 'accountant'], group: 'المخزون' },
+  { href: '/item', label: '🔎 تاريخ حركة صنف', title: 'مين اشترى الصنف ده وإمتى وبكام', roles: ['admin', 'cashier', 'accountant'], group: 'المخزون' },
   { href: '/purchases', label: '📥 المشتريات والموردين', title: 'المشتريات والموردين', roles: ['admin', 'accountant'], group: 'المخزون' },
   { href: '/order', label: '📋 طلب بضاعة', title: 'طلب بضاعة من مورد', roles: ['admin', 'accountant'], group: 'المخزون' },
   { href: '/stocktake', label: '📋 جرد المخزون', title: 'جرد المخزون', roles: ['admin', 'cashier'], group: 'المخزون' },

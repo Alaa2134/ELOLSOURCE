@@ -5,12 +5,24 @@ import {
   saveSettings,
   exportBackup,
   importBackup,
+  countBackup,
+  markBackupDone,
+  backupInfo,
   cloudEnabled,
   syncPull,
   getCloudConfig,
   setCloudConfig,
   pushAllToCloud,
 } from '@/lib/db';
+import { dangerBox } from '@/lib/ui';
+import { fmtDate } from '@/lib/format';
+
+// أسماء الجداول بالعربي — بتظهر للمستخدم قبل الاسترجاع عشان يعرف الملف فيه إيه
+const LABELS = {
+  products: 'صنف', customers: 'عميل', invoices: 'فاتورة بيع', payments: 'سند قبض',
+  expenses: 'مصروف', suppliers: 'مورد', purchases: 'فاتورة شراء/طلب',
+  quotes: 'عرض سعر', stocktakes: 'جرد', daycloses: 'إقفال يومية',
+};
 
 export default function SettingsPage() {
   const [s, setS] = useState(null);
@@ -19,10 +31,12 @@ export default function SettingsPage() {
   const [sbKey, setSbKey] = useState('');
   const [sbMsg, setSbMsg] = useState('');
   const [testing, setTesting] = useState(false);
+  const [bk, setBk] = useState({ at: null, days: null });
   const fileRef = useRef(null);
 
   useEffect(() => {
     setS(getSettings());
+    setBk(backupInfo());
     const c = getCloudConfig();
     if (c) {
       setSbUrl(c.url);
@@ -67,24 +81,51 @@ export default function SettingsPage() {
 
   function downloadBackup() {
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([exportBackup()], { type: 'application/json' }));
-    a.download = `saqqa-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    const url = URL.createObjectURL(new Blob([exportBackup()], { type: 'application/json' }));
+    a.href = url;
+    a.download = `نسخة-السقا-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
+    URL.revokeObjectURL(url);
+    markBackupDone();
+    setBk(backupInfo());
+    setMsg('✅ النسخة اتنزّلت على جهازك — خليها في مكان أمان');
+    setTimeout(() => setMsg(''), 3000);
   }
 
-  function restoreBackup(e) {
+  // الاسترجاع بيمسح كل البيانات الحالية — لازم تأكيد صريح بعد ما نوريه الملف فيه إيه
+  async function restoreBackup(e) {
     const f = e.target.files?.[0];
+    e.target.value = ''; // عشان لو اختار نفس الملف تاني يشتغل
     if (!f) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        importBackup(reader.result);
-        setMsg('✅ تم استرجاع النسخة الاحتياطية — أعد تحميل الصفحة');
-      } catch {
-        setMsg('❌ ملف غير صالح');
-      }
-    };
-    reader.readAsText(f);
+    let text;
+    try { text = await f.text(); } catch { setMsg('❌ مقدرناش نقرا الملف'); return; }
+
+    let data;
+    try { data = JSON.parse(text); } catch { setMsg('❌ الملف ده مش نسخة احتياطية'); return; }
+    const c = countBackup(data);
+    const lines = Object.entries(LABELS)
+      .filter(([k]) => c[k] !== undefined)
+      .map(([k, label]) => `• ${label}: ${c[k]}`);
+    if (!lines.length) { setMsg('❌ الملف ده مش نسخة احتياطية'); return; }
+
+    const ok = await dangerBox({
+      title: '⚠️ استرجاع نسخة احتياطية',
+      icon: '📤',
+      message:
+        `الملف فيه:\n${lines.join('\n')}\n\n` +
+        `الاسترجاع هيمسح كل البيانات الموجودة على الجهاز دلوقتي ويحطّ اللي في الملف مكانها.\n` +
+        `لو مش متأكد، نزّل نسخة من الوضع الحالي الأول.`,
+      confirmText: 'أيوة، استرجع',
+    });
+    if (!ok) return;
+
+    try {
+      importBackup(text);
+      setMsg('✅ تم الاسترجاع — جاري إعادة التحميل...');
+      setTimeout(() => window.location.reload(), 900);
+    } catch (err) {
+      setMsg(`❌ ${err.message || 'ملف غير صالح'}`);
+    }
   }
 
   return (
@@ -165,16 +206,34 @@ export default function SettingsPage() {
           <button className="btn-accent" onClick={saveCloud} disabled={testing}>☁️ حفظ واختبار الاتصال</button>
           {sbMsg && <b style={{ fontSize: 13 }}>{sbMsg}</b>}
         </div>
+        {cloudEnabled() && (
+          <button className="btn-green" onClick={async () => { await syncPull(); setMsg('✅ تمت المزامنة'); }}>
+            🔄 مزامنة الآن
+          </button>
+        )}
+      </div>
+
+      <div className="card">
+        <h3>💾 نسخة احتياطية على جهازك</h3>
+        <p style={{ marginBottom: 10 }}>
+          {bk.days === null
+            ? <span className="badge red">⚠️ عمرك ما نزّلت نسخة احتياطية على الجهاز ده</span>
+            : bk.days >= 7
+              ? <span className="badge orange">⚠️ آخر نسخة من {bk.days} يوم ({fmtDate(bk.at.slice(0, 10))}) — نزّل واحدة جديدة</span>
+              : <span className="badge green">✅ آخر نسخة {bk.days === 0 ? 'النهارده' : `من ${bk.days} يوم`} ({fmtDate(bk.at.slice(0, 10))})</span>}
+        </p>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <button className="btn-primary" onClick={downloadBackup}>📥 تحميل نسخة احتياطية</button>
-          <button onClick={() => fileRef.current?.click()}>📤 استرجاع نسخة احتياطية</button>
-          <input ref={fileRef} type="file" accept=".json" hidden onChange={restoreBackup} />
-          {cloudEnabled() && (
-            <button className="btn-green" onClick={async () => { await syncPull(); setMsg('✅ تمت المزامنة'); }}>
-              🔄 مزامنة الآن
-            </button>
-          )}
+          <button className="btn-accent" style={{ fontSize: 15, padding: '10px 18px' }} onClick={downloadBackup}>
+            📥 نزّل نسخة دلوقتي
+          </button>
+          <button onClick={() => fileRef.current?.click()}>📤 استرجاع من ملف</button>
+          <input ref={fileRef} type="file" accept=".json,application/json" hidden onChange={restoreBackup} />
         </div>
+        <p className="muted" style={{ fontSize: 12, marginTop: 10, lineHeight: 1.8 }}>
+          الملف بيتنزّل على الجهاز على طول — من غير أي إعداد ولا إنترنت. فيه كل حاجة: الأصناف والعملاء
+          والفواتير والمشتريات وعروض الأسعار والمصاريف والإعدادات.<br />
+          💡 خد نسخة كل أسبوع وحطّها على فلاشة أو ابعتها لنفسك على واتساب.
+        </p>
       </div>
 
       {msg && <div className="save-flash">{msg}</div>}

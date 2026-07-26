@@ -85,11 +85,17 @@ export default function PosPage() {
   const [isMobile, setIsMobile] = useState(false); // موبايل؟ (عشان الكاميرا)
   const [editingInv, setEditingInv] = useState(null); // فاتورة محفوظة مفتوحة للقراءة والتعديل
   const [navPos, setNavPos] = useState({ pos: 0, total: 0 });
+  const [showKeys, setShowKeys] = useState(false); // لوحة الاختصارات (F1)
   const tableRef = useRef(null);
   const scanBuf = useRef({ txt: '', t: 0 }); // بافر سكانر الباركود USB/بلوتوث
   const editLoadRef = useRef(false); // بيمنع فحص المديونية من مسح بيانات الفاتورة المفتوحة
 
   const DRAFT_KEY = 'saqqa_pos_draft';
+
+  // صلاحيات الكاشير — بتتقري بدري عشان الاختصارات والحسابات تستخدمها
+  const canPrice = role === 'admin' || settings?.perms?.allowPriceEdit;
+  const canDisc = role === 'admin' || settings?.perms?.allowDiscount;
+
 
   useEffect(() => {
     setSettings(getSettings());
@@ -201,17 +207,30 @@ export default function PosPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [products, customerName]);
 
-  // اختصارات الكيبورد للكاشير: F2 فاتورة جديدة · F4 حفظ وطباعة · F3 ركّز على الصنف
+  // اختصارات الكيبورد — الكاشير يخلّص الفاتورة من غير ما يلمس الماوس خالص
   useEffect(() => {
+    function focusEl(sel) {
+      const el = document.querySelector(sel);
+      if (el) { el.focus(); el.select?.(); }
+    }
     function onFn(e) {
       if (e.key === 'F2') { e.preventDefault(); newInvoice(); }
-      else if (e.key === 'F4') { e.preventDefault(); if (!saved) save(true); }
       else if (e.key === 'F3') { e.preventDefault(); focusCell(0, 'code'); }
+      else if (e.key === 'F4') { e.preventDefault(); if (!saved) save(true); }
+      else if (e.key === 'F6') { e.preventDefault(); focusEl('[data-k="customer"]'); }
+      else if (e.key === 'F7') { e.preventDefault(); if (canDisc) { setShowHaggle(true); setTimeout(() => focusEl('[data-k="agreed"]'), 30); } }
+      else if (e.key === 'F9') { e.preventDefault(); focusEl('[data-k="paid"]'); }
+      else if (e.key === 'F1') { e.preventDefault(); setShowKeys((v) => !v); }
+      // Ctrl+Enter = حفظ من غير طباعة (لما العميل مش عايز ورقة)
+      else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); if (!saved) save(false); }
+      // Alt + سهم = الفاتورة اللي قبلها/بعدها
+      else if (e.altKey && e.key === 'ArrowRight') { e.preventDefault(); gotoInvoice('prev'); }
+      else if (e.altKey && e.key === 'ArrowLeft') { e.preventDefault(); gotoInvoice('next'); }
     }
     window.addEventListener('keydown', onFn);
     return () => window.removeEventListener('keydown', onFn);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [saved, rows, customerName, payment, paid, extraDisc, rep, editingInv]);
+  }, [saved, rows, customerName, payment, paid, extraDisc, rep, editingInv, canDisc]);
 
   // تنبيه المديونية عند اختيار العميل — بيتعطل لحظة فتح فاتورة محفوظة عشان قيمها المسجلة متتمسحش
   useEffect(() => {
@@ -225,15 +244,57 @@ export default function PosPage() {
     setTimeout(() => setToast(''), 3500);
   }
 
-  const canPrice = role === 'admin' || settings?.perms?.allowPriceEdit;
-  const canDisc = role === 'admin' || settings?.perms?.allowDiscount;
-
   const lineTotal = (r) => Math.max(0, (Number(r.qty) || 0) * (Number(r.price) || 0) - (Number(r.disc) || 0));
   const subtotal = useMemo(() => rows.reduce((s, r) => s + (Number(r.qty) || 0) * (Number(r.price) || 0), 0), [rows]);
   const lineDiscs = useMemo(() => rows.reduce((s, r) => s + (Number(r.disc) || 0), 0), [rows]);
   const debtAdd = includeDebt ? prevDebt : 0;
   const goodsBefore = Math.max(0, subtotal - lineDiscs); // قيمة البضاعة قبل الفصال
   const net = Math.max(0, subtotal - lineDiscs - (Number(extraDisc) || 0)) + debtAdd;
+
+  // ---------- حارس الربح ----------
+  // بيحسب تكلفة البضاعة اللي في الفاتورة ويقارنها بصافي البيع.
+  // مهم: الفصال بيتخصم من الإجمالي كله، فالمقارنة لازم تبقى على الفاتورة كلها مش سطر سطر —
+  // من غير كده الكاشير يقدر يفاصل لتحت التكلفة والبرنامج مايحسّش.
+  const guard = useMemo(() => {
+    let cost = 0;
+    let known = 0; // قيمة بيع الأصناف اللي عارفين تكلفتها
+    let unknown = 0; // وقيمة اللي متسجلش ليها سعر شراء
+    for (const r of rows) {
+      if (!r.code || !(Number(r.qty) > 0)) continue;
+      const p = products.find((x) => String(x.code) === String(r.code));
+      const line = lineTotal(r);
+      const c = Number(p?.cost) || 0;
+      if (c > 0) { cost += c * rowStockQty(r); known += line; }
+      else unknown += line;
+    }
+    const goodsNet = Math.max(0, subtotal - lineDiscs - (Number(extraDisc) || 0));
+    // الفصال بيتوزع بالنسبة على الأصناف — بنحسب نصيب الأصناف المعروفة التكلفة بس
+    const share = known + unknown > 0 ? known / (known + unknown) : 0;
+    const netKnown = goodsNet * share;
+    const profit = Math.round((netKnown - cost) * 100) / 100;
+    const margin = netKnown > 0 ? (profit / netKnown) * 100 : 0;
+    return {
+      cost: Math.round(cost * 100) / 100,
+      profit,
+      margin: Math.round(margin * 10) / 10,
+      hasCost: cost > 0,
+      // فيه أصناف لسه متسجلش ليها سعر شراء؟ يبقى الحساب ناقص ولازم نقولها
+      partial: unknown > 0 && cost > 0,
+    };
+  }, [rows, products, subtotal, lineDiscs, extraDisc]);
+
+  const minMargin = Number(settings?.alerts?.minMargin);
+  const lossAlert = guard.hasCost && guard.profit < 0;
+  const thinAlert = guard.hasCost && !lossAlert && minMargin > 0 && guard.margin < minMargin;
+  // الأرقام دي سر — الكاشير بيشوف التحذير بس من غير ما يعرف تكلفتنا كام
+  const showProfit = role === 'admin' || role === 'accountant';
+
+  // صفّارة مرة واحدة أول ما الفاتورة تدخل في خسارة (مش كل ضغطة زرار)
+  const lossBeeped = useRef(false);
+  useEffect(() => {
+    if (lossAlert && !lossBeeped.current) { warnBeep(); lossBeeped.current = true; }
+    if (!lossAlert) lossBeeped.current = false;
+  }, [lossAlert]);
 
   // الفصال: الكاشير بيكتب الرقم اللي اتفق عليه مع العميل، والبرنامج بيحسب الخصم لوحده
   function setAgreed(v) {
@@ -422,6 +483,19 @@ export default function PosPage() {
         confirmText: 'أيوة، أكمل البيع',
       });
       if (!okUnder) return;
+    }
+
+    // تحذير: الفاتورة كلها بخسارة (بعد الخصومات والفصال) — آخر فرصة قبل ما الفلوس تضيع
+    if (lossAlert) {
+      warnBeep();
+      const okLoss = await confirmBox({
+        title: '⛔ الفاتورة دي بخسارة', danger: true, icon: '📉',
+        message: showProfit
+          ? `تكلفة البضاعة: ${num(guard.cost, ar)} ${settings.currency}\nصافي البيع أقل منها بـ ${num(Math.abs(guard.profit), ar)} ${settings.currency}.${guard.partial ? '\n\n(فيه أصناف لسه متسجلش ليها سعر شراء، فالحساب تقريبي)' : ''}\n\nتحفظ الفاتورة بالخسارة دي؟`
+          : 'السعر اللي في الفاتورة أقل من تكلفة البضاعة.\n\nتأكد من صاحب المحل قبل ما تكمّل.\n\nتحفظ برضه؟',
+        confirmText: 'أيوة، احفظ',
+      });
+      if (!okLoss) return;
     }
 
     // تحذير: كميات أكبر من المخزون الموجود — تأكيد قبل الحفظ (المخزون هيبقى بالسالب)
@@ -708,6 +782,7 @@ export default function PosPage() {
             <label className="field">
               <span>اسم العميل</span>
               <input
+                data-k="customer"
                 list="customers-list"
                 value={customerName}
                 onChange={(e) => selectCustomer(e.target.value)}
@@ -787,7 +862,11 @@ export default function PosPage() {
                             sortMode={settings.suggestSort}
                             freq={freq}
                             onType={(v) => updateRow(i, { name: v })}
-                            onSelect={(p) => { updateRow(i, { code: p.code, name: p.name, price: priceFor(p), unit: '' }); focusCell(i, 'qty'); }}
+                            onSelect={(p, typedQty) => {
+                              // كتب "12 كاس مدهب"؟ الكمية اتحطت لوحدها فبننط للسعر على طول
+                              updateRow(i, { code: p.code, name: p.name, price: priceFor(p), unit: '', ...(typedQty ? { qty: typedQty } : {}) });
+                              focusCell(i, typedQty ? 'price' : 'qty');
+                            }}
                             onNavKey={(e) => onKey(e, i, 'name')}
                           />
                         </div>
@@ -865,9 +944,9 @@ export default function PosPage() {
             >
               📷 مسح بالكاميرا {!isMobile && '(للموبايل)'}
             </button>
+            <button className="btn-sm" onClick={() => setShowKeys(true)}>⌨️ الاختصارات (F1)</button>
             <p className="muted" style={{ fontSize: 12, margin: 0 }}>
-              💡 اكتب الكود أو الاسم وهتظهر الاقتراحات — Enter بينقلك بين الخانات — أو <b>امسح الباركود بسكانر الجهاز</b> (USB/بلوتوث) والصنف هيتضاف لوحده.
-              <br />⌨️ اختصارات: <b>F2</b> فاتورة جديدة · <b>F3</b> ركّز على الصنف · <b>F4</b> حفظ وطباعة.
+              💡 اكتب <b>الكمية والاسم مع بعض</b> — مثلاً «١٢ كاس مدهب» والكمية هتتحط لوحدها.
             </p>
           </div>
         </div>
@@ -881,6 +960,7 @@ export default function PosPage() {
                 <div className="row haggle-row" style={{ alignItems: 'center' }}>
                   <span>الإجمالي بعد الاتفاق</span>
                   <input
+                    data-k="agreed"
                     type="number" min="0" step="any" autoFocus
                     style={{ width: 110, textAlign: 'center', fontWeight: 900 }}
                     value={agreedValue}
@@ -905,9 +985,34 @@ export default function PosPage() {
               <div className="row"><span>حساب سابق</span><b className="red-text">+{num(debtAdd, ar)}</b></div>
             )}
             <div className="row big"><span>الصافي</span><span>{num(net, ar)} {settings.currency}</span></div>
+
+            {/* حارس الربح — الأدمن بيشوف الأرقام، والكاشير بيشوف التحذير بس */}
+            {showProfit && guard.hasCost && (
+              <div className="row" style={{ marginTop: 4 }}>
+                <span>الربح{guard.partial ? ' (تقريبي)' : ''}</span>
+                <b className={guard.profit < 0 ? 'red-text' : thinAlert ? 'orange-text' : 'green-text'}>
+                  {num(guard.profit, ar)} {settings.currency}
+                  <small style={{ fontWeight: 600, marginRight: 6 }}>({num(guard.margin, ar)}%)</small>
+                </b>
+              </div>
+            )}
+            {lossAlert && (
+              <div className="profit-alert loss">
+                ⛔ الفاتورة دي <b>بخسارة</b>
+                {showProfit
+                  ? <> — التكلفة {num(guard.cost, ar)} والبيع أقل منها بـ {num(Math.abs(guard.profit), ar)} {settings.currency}</>
+                  : <> — السعر ده أقل من تكلفة البضاعة. كلّم صاحب المحل قبل ما تحفظ.</>}
+              </div>
+            )}
+            {thinAlert && (
+              <div className="profit-alert thin">
+                ⚠️ الربح ضعيف ({num(guard.margin, ar)}% — الحد {num(minMargin, ar)}%)
+              </div>
+            )}
             <div className="row" style={{ alignItems: 'center', marginTop: 6 }}>
               <span>المدفوع نقدي</span>
               <input
+                data-k="paid"
                 type="number" min="0" step="any"
                 style={{ width: 110, textAlign: 'center' }}
                 value={paid === '' ? paidNum : paid}
@@ -968,6 +1073,34 @@ export default function PosPage() {
         </div>
       </div>
 
+      {showKeys && (
+        <div className="dlg-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowKeys(false); }}>
+          <div className="dlg-box keys-box" style={{ maxWidth: 480, textAlign: 'right' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <h3 style={{ color: 'var(--brand)', margin: 0 }}>⌨️ اختصارات شاشة البيع</h3>
+              <button className="btn-sm" onClick={() => setShowKeys(false)}>✕</button>
+            </div>
+            <table className="keys-tbl">
+              <tbody>
+                <tr><td><kbd>F2</kbd></td><td>فاتورة جديدة</td></tr>
+                <tr><td><kbd>F3</kbd></td><td>ارجع لأول صنف</td></tr>
+                <tr><td><kbd>F4</kbd></td><td>حفظ وطباعة</td></tr>
+                <tr><td><kbd>Ctrl</kbd>+<kbd>Enter</kbd></td><td>حفظ من غير طباعة</td></tr>
+                <tr><td><kbd>F6</kbd></td><td>اسم العميل</td></tr>
+                {canDisc && <tr><td><kbd>F7</kbd></td><td>خانة الاتفاق (الفصال)</td></tr>}
+                <tr><td><kbd>F9</kbd></td><td>المدفوع نقدي</td></tr>
+                <tr><td><kbd>Enter</kbd></td><td>الخانة اللي بعدها</td></tr>
+                <tr><td><kbd>Alt</kbd>+<kbd>→</kbd> / <kbd>←</kbd></td><td>الفاتورة السابقة / التالية</td></tr>
+                <tr><td><kbd>F1</kbd></td><td>تفتح وتقفل الجدول ده</td></tr>
+              </tbody>
+            </table>
+            <p className="muted" style={{ fontSize: 12, marginTop: 12, lineHeight: 1.8 }}>
+              🔢 اكتب الكمية قبل الاسم: «<b>12 كاس مدهب</b>» = ١٢ قطعة.<br />
+              📷 امسك سكانر الباركود (USB/بلوتوث) وامسح — الصنف بيتضاف لوحده.
+            </p>
+          </div>
+        </div>
+      )}
       {scanning && <BarcodeScanner onScan={addByScan} onClose={() => setScanning(false)} />}
       {toast && <div className="toast">{toast}</div>}
     </div>
