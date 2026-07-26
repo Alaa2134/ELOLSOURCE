@@ -88,6 +88,7 @@ export default function Shell({ children }) {
   const [invQ, setInvQ] = useState(''); // بحث سريع برقم الفاتورة
   const [lowCount, setLowCount] = useState(0); // عدد الأصناف الناقصة (بادج القايمة)
   const [menuOpen, setMenuOpen] = useState(false); // درج القايمة على الموبايل
+  const [dark, setDark] = useState(false); // الوضع الليلي
   const [storeNew, setStoreNew] = useState(0); // عدد طلبات المتجر الجديدة (بادج + صوت)
   const prevStoreNew = useRef(-1);
   const lastBeat = useRef(Date.now());
@@ -126,6 +127,19 @@ export default function Shell({ children }) {
     }
     setReady(true);
   }, [pathname, bare, router]);
+
+  // الوضع الليلي — بيتحفظ على الجهاز ويرجع زي ما سبته
+  useEffect(() => {
+    const on = localStorage.getItem('saqqa_theme') === 'dark';
+    setDark(on);
+    document.documentElement.setAttribute('data-theme', on ? 'dark' : 'light');
+  }, []);
+  function toggleTheme() {
+    const on = !dark;
+    setDark(on);
+    localStorage.setItem('saqqa_theme', on ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', on ? 'dark' : 'light');
+  }
 
   // صوت تنبيه قصير لطلب متجر جديد
   function orderBeep() {
@@ -363,6 +377,9 @@ export default function Shell({ children }) {
               {printers.map((p) => <option key={p} value={p}>🖨️ {p}</option>)}
             </select>
             <span>📅 {fmtDate(new Date().toISOString(), s.arabicDigits)}</span>
+            <button className="btn-sm" title={dark ? 'الوضع النهاري' : 'الوضع الليلي'} onClick={toggleTheme}>
+              {dark ? '☀️' : '🌙'}
+            </button>
             <button
               className="btn-sm"
               onClick={() => {
