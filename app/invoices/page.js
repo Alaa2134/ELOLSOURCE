@@ -5,6 +5,7 @@ import { listInvoices, deleteInvoice, getSettings, isAdmin } from '@/lib/db';
 import { num, fmtDate, fmtTime } from '@/lib/format';
 import { waMeLink, buildMessage, invoiceLink, notifyAdmin } from '@/lib/wa';
 import { dangerBox } from '@/lib/ui';
+import ReviewFlag from '@/components/ReviewFlag';
 
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState([]);
@@ -80,6 +81,12 @@ export default function InvoicesPage() {
                 <td>{(i.totals?.remaining || 0) > 0 ? <span className="red-text">{num(i.totals.remaining, ar)}</span> : '—'}</td>
                 <td style={{ display: 'flex', gap: 6 }}>
                   <Link className="btn btn-sm btn-primary" href={`/print/${i.id}`}>🖨️ طباعة</Link>
+                  <ReviewFlag
+                    docType={i.type === 'مرتجع' ? 'return' : 'invoice'}
+                    doc={i}
+                    label={`${i.type === 'مرتجع' ? 'مرتجع' : 'فاتورة'} ${i.number} — ${i.customer?.name || 'عميل نقدي'} بمبلغ ${i.totals?.net || 0}`}
+                    onDone={reload}
+                  />
                   {i.type !== 'مرتجع' && <Link className="btn btn-sm" href={`/returns?inv=${i.id}`} title="عمل مرتجع">↩️</Link>}
                   {i.customer?.phone && (
                     <a className="btn btn-sm btn-green" target="_blank" rel="noreferrer" href={waMeLink(i.customer.phone, waMsg(i))}>💬</a>

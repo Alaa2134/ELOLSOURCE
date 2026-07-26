@@ -4,11 +4,11 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   fetchStoreOrders, setStoreOrderStatus, deleteStoreOrder, getSettings, cloudEnabled, cloudTableMissing,
-  savePayment, nextPaymentNumber, getCashierName,
+  savePayment, nextPaymentNumber, getCashierName, getRole, flagStoreOrderReview,
 } from '@/lib/db';
 import { num, fmtDate, fmtTime, todayISO } from '@/lib/format';
 import { waMeLink } from '@/lib/wa';
-import { confirmBox, dangerBox } from '@/lib/ui';
+import { confirmBox, dangerBox, promptBox } from '@/lib/ui';
 
 export default function StoreOrdersPage() {
   const router = useRouter();
@@ -50,12 +50,27 @@ export default function StoreOrdersPage() {
 
   async function markDone(o) { await setStoreOrderStatus(o.id, 'اتنفّذ'); reload(); }
 
+  // المحاسب أو الأدمن يشكّ في تحصيل مندوب — بيتعلّم من غير ما يتلغي
+  async function askReview(o) {
+    const reason = await promptBox({
+      title: '🚩 طلب مراجعة', icon: '🚩',
+      message: `تحصيل ${num(o.total)} ${cur} من ${o.trader?.name} — المندوب ${o.rep || ''}\n\nإيه اللي مش مظبوط؟`,
+      placeholder: 'مثلاً: المبلغ مش مطابق للي وصلني',
+      confirmText: 'اطلب المراجعة',
+    });
+    if (reason === null) return;
+    await flagStoreOrderReview(o.id, { reason, by: getCashierName() || getRole() });
+    reload();
+  }
+
   // تحصيل المندوب: الكاشير هو اللي بيعمل سند القبض بعد ما يستلم الفلوس فعلاً
   async function acceptCollection(o) {
     const amount = Number(o.total) || 0;
     const ok = await confirmBox({
-      title: '💵 اعتماد تحصيل', icon: '💵',
-      message: `المندوب ${o.rep || ''} حصّل ${num(amount)} ${cur} من ${o.trader?.name}.\n\nتأكيد إنك استلمت الفلوس؟ هيتعمل سند قبض ويتخصم من حساب العميل.`,
+      title: '💵 اعتماد تحصيل', icon: '💵', danger: !!o.review?.open,
+      message: `المندوب ${o.rep || ''} حصّل ${num(amount)} ${cur} من ${o.trader?.name}.`
+        + (o.review?.open ? `\n\n🚩 فيه طلب مراجعة على التحصيل ده: ${o.review.reason || ''}` : '')
+        + `\n\nتأكيد إنك استلمت الفلوس؟ هيتعمل سند قبض ويتخصم من حساب العميل.`,
       confirmText: 'استلمت — اعمل السند',
     });
     if (!ok) return;
@@ -145,6 +160,9 @@ export default function StoreOrdersPage() {
                   من المندوب{o.rep ? ` ${o.rep}` : ''}
                 </span>
               )}
+              {o.review?.open && (
+                <span className="badge red" style={{ marginRight: 6 }} title={o.review.reason}>🚩 محتاج مراجعة</span>
+              )}
               <div className="muted" style={{ fontSize: 13 }} dir="ltr">{o.trader?.phone} · {fmtDate(o.createdAt, ar)} {fmtTime(o.createdAt, ar)}</div>
             </div>
             <div style={{ textAlign: 'left' }}>
@@ -180,6 +198,9 @@ export default function StoreOrdersPage() {
               : <button className="btn-green" onClick={() => convert(o)}>🧾 حوّلها لفاتورة بيع</button>}
             {o.trader?.phone && <a className="btn" target="_blank" rel="noreferrer" href={waMeLink(o.trader.phone, traderMsg(o))}>💬 واتساب التاجر</a>}
             {isNew(o) && <button onClick={() => markDone(o)}>✔️ علّمها اتنفّذت</button>}
+            {(getRole() === 'admin' || getRole() === 'accountant') && !o.review?.open && (
+              <button onClick={() => askReview(o)}>🚩 اطلب مراجعة</button>
+            )}
             <button className="btn-sm btn-red" onClick={() => remove(o)}>🗑️ حذف</button>
           </div>
         </div>
