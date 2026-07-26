@@ -173,6 +173,12 @@ export default function Shell({ children }) {
     } catch {}
   }
 
+  // الـ service worker لازم يتسجّل على كل الصفحات — بما فيها صفحة استعلام
+  // المندوب (bare) — لأنه هو اللي بيخلي التطبيق يفتح من غير نت
+  useEffect(() => {
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }, []);
+
   // التهيئة الثقيلة (تحميل الأصناف + المزامنة) مرة واحدة بس عند فتح البرنامج — مش مع كل تنقل
   useEffect(() => {
     if (bare) return;
@@ -183,9 +189,6 @@ export default function Shell({ children }) {
     })();
     runDailyBackup();
     refreshStoreOrders();
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
-    }
     const t = setInterval(() => {
       flushPending();
       syncPull(); // مزامنة دورية احتياطية (الأساسي هو Realtime)

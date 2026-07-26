@@ -1228,3 +1228,24 @@ input, select, textarea { transition: border-color .15s, box-shadow .15s; }
 .chart-bars .bar-fill { width: 70%; max-width: 46px; border-radius: 6px 6px 0 0; transition: filter .15s; }
 .chart-bars .bar-val { font-size: 12px; font-weight: 700; color: var(--brand); margin-bottom: 4px; white-space: nowrap; transition: opacity .15s; height: 16px; }
 .chart-bars .bar-label { font-size: 11px; color: var(--muted); margin-top: 6px; text-align: center; max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* شريط حالة الأسعار في استعلام المندوب (أونلاين/أوفلاين + آخر تحديث) */
+.inq-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 8px 2px;
+  font-size: 13px;
+  color: #cbd5e1;
+}
+.inq-status .muted { color: #94a3b8; }
+.inq-status button {
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.2);
+  color: #fff;
+  padding: 5px 12px;
+  font-size: 12px;
+  margin-right: auto;
+}
+.inq-status button:disabled { opacity: .45; }
