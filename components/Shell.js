@@ -87,6 +87,7 @@ export default function Shell({ children }) {
   const [printerName, setPrinterName] = useState('');
   const [invQ, setInvQ] = useState(''); // بحث سريع برقم الفاتورة
   const [lowCount, setLowCount] = useState(0); // عدد الأصناف الناقصة (بادج القايمة)
+  const [menuOpen, setMenuOpen] = useState(false); // درج القايمة على الموبايل
   const [storeNew, setStoreNew] = useState(0); // عدد طلبات المتجر الجديدة (بادج + صوت)
   const prevStoreNew = useRef(-1);
   const lastBeat = useRef(Date.now());
@@ -301,7 +302,10 @@ export default function Shell({ children }) {
         </div>
       )}
 
-      <aside className="sidebar no-print">
+      {/* خلفية سودا لما القايمة تكون مفتوحة على الموبايل — الضغط عليها بيقفلها */}
+      {menuOpen && <div className="menu-backdrop no-print" onClick={() => setMenuOpen(false)} />}
+
+      <aside className={`sidebar no-print${menuOpen ? ' open' : ''}`}>
         <div className="logo">
           <img src="/logo.jpg" alt="ALSAKA" className="logo-img" />
           <div>
@@ -322,7 +326,7 @@ export default function Shell({ children }) {
               <div key={g}>
                 <div className="nav-group">{g}</div>
                 {items.map((n) => (
-                  <Link key={n.href} href={n.href} className={pathname === n.href ? 'active' : ''}>
+                  <Link key={n.href} href={n.href} className={pathname === n.href ? 'active' : ''} onClick={() => setMenuOpen(false)}>
                     <span>{n.label}</span>
                     {n.href === '/lowstock' && lowCount > 0 && (
                       <span className="nav-badge">{lowCount}</span>
@@ -342,6 +346,7 @@ export default function Shell({ children }) {
       </aside>
       <div className="main">
         <header className="topbar no-print">
+          <button className="menu-btn" title="القايمة" onClick={() => setMenuOpen(true)}>☰</button>
           <div className="title">{current ? current.title : s.companyName}</div>
           <div className="meta">
             <GlobalSearch />
