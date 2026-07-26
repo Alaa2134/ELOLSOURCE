@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { listExpenses, saveExpense, deleteExpense, getSettings, isAdmin, getRole } from '@/lib/db';
 import { num, fmtDate, todayISO } from '@/lib/format';
 import { dangerBox } from '@/lib/ui';
+import ReviewFlag from '@/components/ReviewFlag';
 import { useDraft, clearDraft } from '@/lib/useDraft';
 
 const DRAFT_KEY = 'saqqa_expense_draft';
@@ -137,7 +138,8 @@ export default function ExpensesPage() {
                       <td>{x.name || '—'}</td>
                       <td className="red-text">{num(x.amount, ar)}</td>
                       <td><span className="badge blue">{x.by || '—'}</span></td>
-                      <td>
+                      <td style={{ display: 'flex', gap: 6 }}>
+                        <ReviewFlag docType="expense" doc={x} label={`مصروف «${x.desc}» بمبلغ ${x.amount}`} onDone={reload} />
                         {isAdmin() && (
                           <button className="btn-sm btn-red" onClick={async () => { if (await dangerBox('حذف المصروف ده؟')) { deleteExpense(x.id); reload(); } }}>🗑️</button>
                         )}

@@ -2,6 +2,7 @@
 // سند قبض: تحصيل دفعة من عميل مديون بدون فاتورة جديدة
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import ReviewFlag from '@/components/ReviewFlag';
 import { useRouter } from 'next/navigation';
 import {
   listCustomers,
@@ -205,6 +206,8 @@ export default function PaymentsPage() {
                     <td className="green-text">{num(p.amount, ar)}</td>
                     <td style={{ display: 'flex', gap: 6 }}>
                       <Link className="btn btn-sm btn-primary" href={`/payments/print/${p.id}`}>🖨️</Link>
+                      <ReviewFlag docType="payment" doc={p}
+                        label={`سند قبض ${p.number} — ${p.customerName} بمبلغ ${p.amount}`} onDone={reload} />
                       {p.phone && (
                         <a className="btn btn-sm btn-green" target="_blank" rel="noreferrer"
                           href={waMeLink(p.phone, waMsg(p, p.debtAfter))}>💬</a>

@@ -12,6 +12,7 @@ import {
   getRole,
   listInvoices,
   listProducts,
+  openReviewCount,
   getSupabase,
   runDailyBackup,
   ensureFullPush,
@@ -55,6 +56,7 @@ const NAV = [
   { href: '/reports', label: '📈 التقارير', title: 'التقارير', roles: ['admin', 'accountant'], perm: 'cashierReports', group: 'التقارير' },
   { href: '/pnl', label: '📗 أرباح وخسائر', title: 'كشف الأرباح والخسائر الشهري', roles: ['admin', 'accountant'], group: 'التقارير' },
   { href: '/accountant', label: '🧮 لوحة المحاسب', title: 'برنامج المحاسب', roles: ['admin', 'accountant'], group: 'التقارير' },
+  { href: '/review', label: '🚩 طلبات المراجعة', title: 'مستندات المحاسب شاكك فيها', roles: ['admin', 'accountant'], group: 'التقارير' },
   { href: '/pricelist', label: '📃 قائمة أسعار', title: 'قائمة أسعار الجملة للطباعة والواتساب', roles: ['admin', 'accountant'], group: 'التقارير' },
 
   // — أدوات —
@@ -88,6 +90,7 @@ export default function Shell({ children }) {
   const [printerName, setPrinterName] = useState('');
   const [invQ, setInvQ] = useState(''); // بحث سريع برقم الفاتورة
   const [lowCount, setLowCount] = useState(0); // عدد الأصناف الناقصة (بادج القايمة)
+  const [reviewCount, setReviewCount] = useState(0); // مستندات محتاجة مراجعة
   const [menuOpen, setMenuOpen] = useState(false); // درج القايمة على الموبايل
   const [dark, setDark] = useState(false); // الوضع الليلي
   const [storeNew, setStoreNew] = useState(0); // عدد طلبات المتجر الجديدة (بادج + صوت)
@@ -124,10 +127,18 @@ export default function Shell({ children }) {
         const st = getSettings();
         const limit = Number(st.lowStock) || 5;
         setLowCount(listProducts().filter((p) => (Number(p.stock) || 0) <= limit).length);
+        setReviewCount(openReviewCount());
       } catch {}
     }
     setReady(true);
   }, [pathname, bare, router]);
+
+  // بادج المراجعة بيتحدّث فوراً لما علامة تتفتح أو تتقفل
+  useEffect(() => {
+    const on = () => setReviewCount(openReviewCount());
+    window.addEventListener('saqqa-review-changed', on);
+    return () => window.removeEventListener('saqqa-review-changed', on);
+  }, []);
 
   // الوضع الليلي — بيتحفظ على الجهاز ويرجع زي ما سبته
   useEffect(() => {
@@ -346,6 +357,9 @@ export default function Shell({ children }) {
                 {items.map((n) => (
                   <Link key={n.href} href={n.href} className={pathname === n.href ? 'active' : ''} onClick={() => setMenuOpen(false)}>
                     <span>{n.label}</span>
+                    {n.href === '/review' && reviewCount > 0 && (
+                      <span className="nav-badge">{reviewCount}</span>
+                    )}
                     {n.href === '/lowstock' && lowCount > 0 && (
                       <span className="nav-badge">{lowCount}</span>
                     )}
