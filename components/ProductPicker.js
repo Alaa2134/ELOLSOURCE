@@ -31,6 +31,18 @@ function Highlight({ text, words }) {
   return parts.map((p, i) => (p.on ? <mark key={i} className="pick-hit">{p.t}</mark> : <span key={i}>{p.t}</span>));
 }
 
+// "12 كاس مدهب" أو "١٢ كاس مدهب" = ١٢ قطعة من كاس مدهب.
+// بيرجع { qty, text } — qty = null يعني المستخدم كتب اسم عادي مفيهوش كمية.
+// رقم لوحده (زي "1204") مابيتحسبش كمية عشان ده غالباً كود صنف.
+export function splitQty(raw) {
+  const s = String(raw || '').replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+  const m = s.match(/^\s*(\d{1,5}(?:[.,]\d{1,3})?)\s+(\S.*)$/);
+  if (!m) return { qty: null, text: raw };
+  const qty = Number(m[1].replace(',', '.'));
+  if (!(qty > 0)) return { qty: null, text: raw };
+  return { qty, text: m[2] };
+}
+
 export default function ProductPicker({ value, products, onType, onSelect, onNavKey, dataR, dataC, arabicDigits, sortMode = 'ذكي', freq = null }) {
   const [open, setOpen] = useState(false);
   const [similar, setSimilar] = useState(false); // وضع "المشابهة" من السهم
@@ -44,7 +56,9 @@ export default function ProductPicker({ value, products, onType, onSelect, onNav
     setOpen(true);
   });
 
-  const q = (value || '').trim();
+  const raw = (value || '').trim();
+  // الكمية اللي اتكتبت قدام الاسم (لو فيه) — بتتشال من البحث وبتترجع مع الصنف
+  const { qty: typedQty, text: q } = useMemo(() => splitQty(raw), [raw]);
   const words = useMemo(() => normAr(q).split(' ').filter(Boolean), [q]);
   const matches = useMemo(() => {
     if (similar) return similarProducts(products, q);
@@ -57,7 +71,7 @@ export default function ProductPicker({ value, products, onType, onSelect, onNav
   function pick(p) {
     setOpen(false);
     setSimilar(false);
-    onSelect(p);
+    onSelect(p, typedQty);
   }
 
   function onKeyDown(e) {
@@ -114,6 +128,9 @@ export default function ProductPicker({ value, products, onType, onSelect, onNav
             <li className="picker-head">
               {q ? `🔎 أصناف مشابهة لـ "${q.split(' ').slice(0, 2).join(' ')}"` : '📦 كل الأصناف'}
             </li>
+          )}
+          {!similar && typedQty && (
+            <li className="picker-head">🔢 الكمية هتتحط <b>{num(typedQty, arabicDigits)}</b> تلقائياً</li>
           )}
           {matches.map((p, i) => (
             <li
