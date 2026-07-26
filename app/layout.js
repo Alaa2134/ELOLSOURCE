@@ -5,13 +5,14 @@ import DialogHost from '@/components/DialogHost';
 export const metadata = {
   title: 'السقا للأدوات المنزلية — نظام الكاشير',
   description: 'برنامج كاشير ونقطة بيع متكامل لشركة السقا للأدوات المنزلية',
+  // من هنا عشان صفحة الاستعلام تقدر تستبدله بمانيفست المندوب
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="ar" dir="rtl">
       <head>
-        <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#f26a1b" />
         <link rel="apple-touch-icon" href="/icon-192.png" />
         <link rel="icon" href="/icon-192.png" />

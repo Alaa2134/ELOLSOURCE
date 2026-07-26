@@ -14,3 +14,14 @@ lib/setupTexts.js
 desktop/node_modules/
 desktop/dist/
 public/version.txt
+
+# تطبيق المندوب (أندرويد) — مفتاح التوقيع والمخرجات مايتحطوش في المستودع أبداً
+android/local.properties
+android/.gradle/
+android/build/
+android/app/build/
+*.keystore
+*.jks
+*.apk
+# ماعدا نسخة التطبيق الجاهزة للتنزيل من الموقع
+!public/app/*.apk

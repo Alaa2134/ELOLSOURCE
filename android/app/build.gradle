@@ -1,0 +1,39 @@
+plugins { id 'com.android.application' }
+
+android {
+  namespace 'eg.alsaka.rep'
+  compileSdk 34
+
+  defaultConfig {
+    applicationId "eg.alsaka.rep"
+    minSdk 21
+    targetSdk 34
+    versionCode 1
+    versionName "1.0.0"
+  }
+
+  signingConfigs {
+    release {
+      storeFile file(System.getenv("ALSAKA_KEYSTORE"))
+      storePassword System.getenv("ALSAKA_STOREPASS")
+      keyAlias "alsaka"
+      keyPassword System.getenv("ALSAKA_KEYPASS")
+    }
+  }
+
+  buildTypes {
+    release {
+      signingConfig signingConfigs.release
+      minifyEnabled false
+    }
+  }
+
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_1_8
+    targetCompatibility JavaVersion.VERSION_1_8
+  }
+}
+
+dependencies {
+  implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0'
+}
