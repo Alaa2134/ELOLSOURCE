@@ -421,6 +421,43 @@ export default function AdminPage() {
         </div>
 
         <div className="card">
+          <h3>🛵 المندوبين وأكوادهم</h3>
+          <p className="muted" style={{ fontSize: 13, marginBottom: 10 }}>
+            كل مندوب بيدخل التطبيق بكوده، والطلب والتحصيل بيوصلوك باسمه.
+          </p>
+          <table className="tbl" style={{ marginBottom: 10 }}>
+            <thead><tr><th>الاسم</th><th>الكود</th><th></th></tr></thead>
+            <tbody>
+              {(s.repUsers || []).map((r, i) => (
+                <tr key={i}>
+                  <td>
+                    <input value={r.name} onChange={(e) => {
+                      const list = [...s.repUsers]; list[i] = { ...r, name: e.target.value }; setS({ ...s, repUsers: list });
+                    }} />
+                  </td>
+                  <td>
+                    <input dir="ltr" style={{ width: 110 }} value={r.code} onChange={(e) => {
+                      const list = [...s.repUsers]; list[i] = { ...r, code: e.target.value.trim() }; setS({ ...s, repUsers: list });
+                    }} />
+                  </td>
+                  <td>
+                    <button className="btn-sm btn-red" onClick={() =>
+                      setS({ ...s, repUsers: s.repUsers.filter((_, j) => j !== i) })}>🗑️</button>
+                  </td>
+                </tr>
+              ))}
+              {!(s.repUsers || []).length && (
+                <tr><td colSpan={3} className="muted">مفيش مندوبين — أي حد معاه كلمة سر الاستعلام هيدخل من غير اسم</td></tr>
+              )}
+            </tbody>
+          </table>
+          <button className="btn-green" onClick={() =>
+            setS({ ...s, repUsers: [...(s.repUsers || []), { name: '', code: '' }] })}>
+            ➕ مندوب جديد
+          </button>
+        </div>
+
+        <div className="card">
           <h3>🤖 تطبيق المندوب (أندرويد)</h3>
           <p className="muted" style={{ fontSize: 13, marginBottom: 8 }}>
             المندوب يمسح الكود ده من موبايله وينزّل التطبيق — أيقونة لوحدها على الشاشة

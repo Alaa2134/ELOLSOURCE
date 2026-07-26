@@ -2,10 +2,13 @@
 // 📥 طلبات الفواتير — الطلبات الجايّة من التجار أونلاين، بتتزامن على كل أجهزة المحل
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { fetchStoreOrders, setStoreOrderStatus, deleteStoreOrder, getSettings, cloudEnabled, cloudTableMissing } from '@/lib/db';
-import { num, fmtDate, fmtTime } from '@/lib/format';
+import {
+  fetchStoreOrders, setStoreOrderStatus, deleteStoreOrder, getSettings, cloudEnabled, cloudTableMissing,
+  savePayment, nextPaymentNumber, getCashierName,
+} from '@/lib/db';
+import { num, fmtDate, fmtTime, todayISO } from '@/lib/format';
 import { waMeLink } from '@/lib/wa';
-import { dangerBox } from '@/lib/ui';
+import { confirmBox, dangerBox } from '@/lib/ui';
 
 export default function StoreOrdersPage() {
   const router = useRouter();
@@ -46,6 +49,28 @@ export default function StoreOrdersPage() {
   }
 
   async function markDone(o) { await setStoreOrderStatus(o.id, 'اتنفّذ'); reload(); }
+
+  // تحصيل المندوب: الكاشير هو اللي بيعمل سند القبض بعد ما يستلم الفلوس فعلاً
+  async function acceptCollection(o) {
+    const amount = Number(o.total) || 0;
+    const ok = await confirmBox({
+      title: '💵 اعتماد تحصيل', icon: '💵',
+      message: `المندوب ${o.rep || ''} حصّل ${num(amount)} ${cur} من ${o.trader?.name}.\n\nتأكيد إنك استلمت الفلوس؟ هيتعمل سند قبض ويتخصم من حساب العميل.`,
+      confirmText: 'استلمت — اعمل السند',
+    });
+    if (!ok) return;
+    savePayment({
+      number: nextPaymentNumber(),
+      date: todayISO(),
+      customerName: o.trader?.name || '',
+      amount,
+      method: 'نقدي',
+      notes: `تحصيل المندوب ${o.rep || ''}${o.notes ? ' — ' + o.notes : ''}`.trim(),
+      cashier: getCashierName(),
+    });
+    await setStoreOrderStatus(o.id, 'اتعمل سند قبض');
+    reload();
+  }
   async function remove(o) {
     if (!(await dangerBox({ title: 'حذف طلب', message: `تمسح طلب ${o.trader?.name}؟` }))) return;
     await deleteStoreOrder(o.id); reload();
@@ -112,7 +137,7 @@ export default function StoreOrdersPage() {
         <div key={o.id} className="card" style={isNew(o) ? { borderRight: '4px solid var(--accent)' } : undefined}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
             <div>
-              <b style={{ fontSize: 16 }}>{o.source === 'مندوب' ? '🛵' : '🧑‍💼'} {o.trader?.name || 'تاجر'}</b>
+              <b style={{ fontSize: 16 }}>{o.kind === 'تحصيل' ? '💵' : o.source === 'مندوب' ? '🛵' : '🧑‍💼'} {o.trader?.name || 'تاجر'}</b>
               {isNew(o) ? <span className="badge red" style={{ marginRight: 8 }}>جديد</span>
                 : <span className="badge green" style={{ marginRight: 8 }}>{o.status}</span>}
               {o.source === 'مندوب' && (
@@ -123,15 +148,21 @@ export default function StoreOrdersPage() {
               <div className="muted" style={{ fontSize: 13 }} dir="ltr">{o.trader?.phone} · {fmtDate(o.createdAt, ar)} {fmtTime(o.createdAt, ar)}</div>
             </div>
             <div style={{ textAlign: 'left' }}>
-              <div style={{ fontSize: 18, fontWeight: 900, color: 'var(--brand)' }}>{num(o.total, ar)} {cur}</div>
-              <div className="muted" style={{ fontSize: 13 }}>{num(o.items?.length || 0, ar)} صنف</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: o.kind === 'تحصيل' ? 'var(--green)' : 'var(--brand)' }}>
+                {num(o.total, ar)} {cur}
+              </div>
+              <div className="muted" style={{ fontSize: 13 }}>
+                {o.kind === 'تحصيل' ? 'تحصيل نقدي' : `${num(o.items?.length || 0, ar)} صنف`}
+              </div>
             </div>
           </div>
           {o.notes && <p className="muted" style={{ marginTop: 6 }}>📝 {o.notes}</p>}
 
-          <button className="btn-sm" style={{ marginTop: 8 }} onClick={() => setOpen(open === o.id ? null : o.id)}>
-            {open === o.id ? '▲ إخفاء الأصناف' : '▼ عرض الأصناف'}
-          </button>
+          {o.kind !== 'تحصيل' && (
+            <button className="btn-sm" style={{ marginTop: 8 }} onClick={() => setOpen(open === o.id ? null : o.id)}>
+              {open === o.id ? '▲ إخفاء الأصناف' : '▼ عرض الأصناف'}
+            </button>
+          )}
           {open === o.id && (
             <table className="tbl" style={{ marginTop: 8 }}>
               <thead><tr><th>الصنف</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead>
@@ -144,7 +175,9 @@ export default function StoreOrdersPage() {
           )}
 
           <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-            <button className="btn-green" onClick={() => convert(o)}>🧾 حوّلها لفاتورة بيع</button>
+            {o.kind === 'تحصيل'
+              ? isNew(o) && <button className="btn-green" onClick={() => acceptCollection(o)}>💵 استلمت الفلوس — اعمل سند قبض</button>
+              : <button className="btn-green" onClick={() => convert(o)}>🧾 حوّلها لفاتورة بيع</button>}
             {o.trader?.phone && <a className="btn" target="_blank" rel="noreferrer" href={waMeLink(o.trader.phone, traderMsg(o))}>💬 واتساب التاجر</a>}
             {isNew(o) && <button onClick={() => markDone(o)}>✔️ علّمها اتنفّذت</button>}
             <button className="btn-sm btn-red" onClick={() => remove(o)}>🗑️ حذف</button>
