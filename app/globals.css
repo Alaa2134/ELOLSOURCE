@@ -250,6 +250,67 @@ a { color: inherit; text-decoration: none; }
 .stat .label { color: var(--muted); font-size: 13px; }
 .stat .value { font-size: 26px; font-weight: 900; color: var(--brand); margin-top: 4px; }
 .stat .sub { font-size: 12px; color: var(--muted); }
+/* ============ عارض الصور بالزوم (استعلام الموبايل) ============ */
+.zoom-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: #0b1219;
+  display: flex; flex-direction: column;
+  touch-action: none;
+  user-select: none;
+}
+.zoom-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px;
+  flex-shrink: 0;
+  background: #111b25;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.zoom-bar button {
+  background: rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.22);
+  color: #fff;
+  border-radius: 10px;
+  padding: 8px 13px;
+  font-size: 15px;
+}
+.zoom-bar button:disabled { opacity: .35; }
+.zoom-pct { color: #cbd5e1; font-size: 13px; font-weight: 700; margin-left: auto; }
+.zoom-stage {
+  flex: 1; min-height: 0;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.zoom-img {
+  max-width: 100%; max-height: 100%;
+  object-fit: contain;
+  transition: transform .08s linear;
+  -webkit-user-drag: none;
+}
+.zoom-none {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  color: #94a3b8; font-size: 15px;
+}
+.zoom-foot {
+  flex-shrink: 0;
+  background: rgba(255,255,255,.06);
+  border-top: 1px solid rgba(255,255,255,.14);
+  padding: 12px 16px;
+  color: #fff;
+}
+.zoom-info b { display: block; font-size: 17px; margin-bottom: 6px; }
+.zoom-meta { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; font-size: 13px; color: #cbd5e1; }
+.zoom-price { color: var(--accent); font-size: 19px; font-weight: 900; }
+.zoom-hint { text-align: center; color: #64748b; font-size: 12px; padding: 0 0 10px; flex-shrink: 0; }
+/* مربّع مكان الصورة لما الصنف مالوش صورة */
+.i-nophoto {
+  width: 46px; height: 46px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: #eef1f5; border: 1px dashed var(--line); border-radius: 8px;
+  font-size: 20px; opacity: .55;
+}
+.inquiry-item { cursor: pointer; }
+.inquiry-item:active { background: rgba(242,106,27,.08); }
+
 /* رسالة نتيجة جوه الصفحة (مش توست) — بتفضل ظاهرة لحد ما تتغير */
 .save-flash-inline {
   background: #eaf5ee;

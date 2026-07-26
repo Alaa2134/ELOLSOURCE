@@ -1,0 +1,18 @@
+{
+  "name": "أسعار السقا — المندوب",
+  "short_name": "أسعار السقا",
+  "description": "قائمة أسعار وصور أصناف شركة السقا للأدوات المنزلية — للمندوبين والتجار",
+  "id": "/inquiry",
+  "start_url": "/inquiry",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "dir": "rtl",
+  "lang": "ar",
+  "background_color": "#142942",
+  "theme_color": "#f26a1b",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

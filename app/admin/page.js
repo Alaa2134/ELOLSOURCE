@@ -113,6 +113,7 @@ export default function AdminPage() {
   const [msg, setMsg] = useState('');
   const [stats, setStats] = useState({ today: 0, month: 0, count: 0 });
   const [phoneQr, setPhoneQr] = useState('');
+  const [apkQr, setApkQr] = useState(''); // QR تنزيل تطبيق المندوب
   // إدارة الكاشيرين بأسماء
   const [cashiers, setCashiers] = useState([]);
   const [newCashier, setNewCashier] = useState({ name: '', pin: '' });
@@ -180,6 +181,8 @@ export default function AdminPage() {
     // الـ QR بيشيل إعداد السحابة معاه — الموبايل بيتظبط تلقائياً أول ما يمسحه
     const url = (st.publicBaseUrl || window.location.origin) + '/inquiry' + cloudLinkHash();
     QRCode.toDataURL(url, { margin: 1, width: 180 }).then(setPhoneQr).catch(() => {});
+    const apk = (st.publicBaseUrl || window.location.origin) + '/app/alsaka-rep.apk';
+    QRCode.toDataURL(apk, { margin: 1, width: 180 }).then(setApkQr).catch(() => {});
   }, []);
 
   // حفظ تلقائي: أي تعديل في الإعدادات بيتخزن لوحده بعد نص ثانية — من غير أزرار
@@ -415,6 +418,26 @@ export default function AdminPage() {
           }} disabled={!s.backupUrl}>
             ☁️ إرسال نسخة الآن للتجربة
           </button>
+        </div>
+
+        <div className="card">
+          <h3>🤖 تطبيق المندوب (أندرويد)</h3>
+          <p className="muted" style={{ fontSize: 13, marginBottom: 8 }}>
+            المندوب يمسح الكود ده من موبايله وينزّل التطبيق — أيقونة لوحدها على الشاشة
+            فيها الأسعار وصور الأصناف.
+          </p>
+          {apkQr && <img src={apkQr} alt="QR تنزيل التطبيق" style={{ display: 'block', margin: '0 auto' }} />}
+          <p style={{ textAlign: 'center', fontSize: 12 }} className="muted" dir="ltr">
+            {(s.publicBaseUrl || (typeof window !== 'undefined' ? window.location.origin : '')) + '/app/alsaka-rep.apk'}
+          </p>
+          <a className="btn btn-accent" style={{ marginTop: 10, width: '100%', justifyContent: 'center' }}
+             href="/app/alsaka-rep.apk" download>
+            ⬇️ نزّل ملف التطبيق
+          </a>
+          <p className="muted" style={{ fontSize: 12, marginTop: 8, lineHeight: 1.8 }}>
+            أول مرة الموبايل هيسأل «السماح بتثبيت تطبيقات من مصدر غير معروف» — وافق عادي،
+            لأن التطبيق ده بتاعنا مش من جوجل بلاي.
+          </p>
         </div>
 
         <div className="card">

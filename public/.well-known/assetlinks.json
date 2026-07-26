@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "eg.alsaka.rep",
+      "sha256_cert_fingerprints": [
+        "A3:01:76:CC:0E:A2:80:FB:34:36:8C:1B:5F:43:79:4D:7B:BA:A2:BF:8E:03:E4:B2:56:D8:0E:72:21:E0:77:FE"
+      ]
+    }
+  }
+]

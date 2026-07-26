@@ -15,6 +15,7 @@ import {
 } from '@/lib/db';
 import { num } from '@/lib/format';
 import BarcodeScanner from '@/components/BarcodeScanner';
+import ImageZoom from '@/components/ImageZoom';
 
 const ROLE_HOME = { admin: '/', cashier: '/pos', accountant: '/accountant' };
 // توحيد النص للبحث: بيشيل المسافات والنجمة عشان "6 1" أو "61" يلاقوا "6*1"
@@ -32,6 +33,7 @@ export default function InquiryPage() {
   const [scanning, setScanning] = useState(false);
   const [showCount, setShowCount] = useState(30);
   const [inApp, setInApp] = useState(false); // مفتوحة من جوه البرنامج؟ (نعرض زر رجوع)
+  const [zoom, setZoom] = useState(null); // الصنف المفتوح بصورته
 
   // زر الرجوع للبرنامج (بيظهر بس لما تكون مفتوحة من جوه البرنامج مش من موبايل العميل)
   function backToApp() {
@@ -165,9 +167,11 @@ export default function InquiryPage() {
           {!cloudEnabled() && ' · 💾 بيانات الجهاز المحلي'}
         </p>
         {filtered.map((p) => (
-          <div className="inquiry-item" key={p.id}>
+          <div className="inquiry-item" key={p.id} onClick={() => setZoom(p)} role="button" tabIndex={0}>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-              {p.image && <img src={p.image} alt="" className="thumb" style={{ width: 46, height: 46 }} />}
+              {p.image
+                ? <img src={p.image} alt="" className="thumb" style={{ width: 46, height: 46 }} />
+                : <span className="i-nophoto">📷</span>}
               <div>
                 <div className="i-name">{p.name}</div>
                 <div className="i-code">كود {ar ? num(p.code, ar) : p.code}</div>
@@ -191,6 +195,26 @@ export default function InquiryPage() {
           </button>
         )}
       </div>
+
+      {zoom && (
+        <ImageZoom src={zoom.image} alt={zoom.name} onClose={() => setZoom(null)}>
+          <div className="zoom-info">
+            <b>{zoom.name}</b>
+            <div className="zoom-meta">
+              <span>كود {ar ? num(zoom.code, ar) : zoom.code}</span>
+              <span className="zoom-price">{num(zoom.price, ar)} {settings.currency}</span>
+              {Number(zoom.packQty) > 0 && (
+                <span>{zoom.packName || 'عبوة'} = {num(zoom.packQty, ar)} قطعة</span>
+              )}
+              {settings.perms?.showStockInquiry && (
+                <span className={`badge ${(Number(zoom.stock) || 0) > 0 ? 'green' : 'red'}`}>
+                  {(Number(zoom.stock) || 0) > 0 ? `متوفر ${num(zoom.stock, ar)}` : 'نافد'}
+                </span>
+              )}
+            </div>
+          </div>
+        </ImageZoom>
+      )}
     </div>
   );
 }
