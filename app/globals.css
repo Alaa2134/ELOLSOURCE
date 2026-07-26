@@ -151,7 +151,46 @@ a { color: inherit; text-decoration: none; }
 .grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
 @media (max-width: 900px) {
   .grid.cols-3, .grid.cols-4 { grid-template-columns: repeat(2, 1fr); }
-  .sidebar { display: none; }
+}
+@media (max-width: 600px) {
+  .grid.cols-2, .grid.cols-3, .grid.cols-4 { grid-template-columns: 1fr; }
+}
+
+/* ====== الموبايل والتابلت: القايمة بتبقى درج بينفتح بزرار ☰ ====== */
+.menu-btn { display: none; }
+@media (max-width: 900px) {
+  /* الدرج وهو مقفول برّه الشاشة كان بيوسّع الصفحة أفقياً — نمنع ده */
+  html, body { overflow-x: hidden; max-width: 100%; }
+  .shell { overflow-x: clip; }
+  /* القايمة بتطلع من اليمين فوق الصفحة */
+  .sidebar {
+    position: fixed; top: 0; right: 0; z-index: 60;
+    height: 100vh; width: 265px; max-width: 85vw;
+    transform: translateX(105%);
+    transition: transform .25s ease;
+    box-shadow: -6px 0 24px rgba(0,0,0,.3);
+    overflow-y: auto;
+  }
+  .sidebar.open { transform: translateX(0); }
+  .menu-backdrop {
+    position: fixed; inset: 0; z-index: 55;
+    background: rgba(0,0,0,.45);
+  }
+  .menu-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 22px; padding: 6px 12px; line-height: 1;
+    background: var(--brand); color: #fff; border-color: var(--brand);
+  }
+  .main { width: 100%; min-width: 0; }
+  /* الشريط العلوي بيلف على سطرين على الموبايل عشان الزراير ما تتراكبش */
+  .topbar { position: sticky; top: 0; z-index: 40; flex-wrap: wrap; padding: 8px 12px; gap: 8px; }
+  .topbar .title { font-size: 16px; flex: 1; min-width: 0; }
+  .topbar .meta { width: 100%; flex-wrap: wrap; gap: 8px; order: 3; }
+  .topbar .meta > * { min-width: 0; }
+  .menu-btn { order: -1; }
+  .content { padding: 12px; }
+  /* الجداول العريضة تتزحلق بدل ما تكسر الصفحة */
+  .tbl, .pos-grid { display: block; overflow-x: auto; white-space: nowrap; }
 }
 
 .stat {
