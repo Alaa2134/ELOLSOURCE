@@ -30,7 +30,7 @@ const NAV = [
   { href: '/returns', label: '↩️ مرتجع بيع', title: 'مرتجع بيع', roles: ['admin', 'cashier'], group: 'الشغل اليومي' },
   { href: '/expenses', label: '💸 المصاريف', title: 'المصاريف اليومية', roles: ['admin', 'cashier', 'accountant'], group: 'الشغل اليومي' },
   { href: '/dayclose', label: '🧮 إقفال يومية', title: 'إقفال يومية والخزنة', roles: ['admin', 'cashier', 'accountant'], group: 'الشغل اليومي' },
-  { href: '/store-orders', label: '📥 طلبات المتجر', title: 'طلبات التجار من المتجر أونلاين', roles: ['admin', 'cashier', 'accountant'], group: 'الشغل اليومي' },
+  { href: '/store-orders', label: '📥 طلبات الفواتير', title: 'طلبات الفواتير من المندوبين والتجار', roles: ['admin', 'cashier', 'accountant'], group: 'الشغل اليومي' },
 
   // — المخزون —
   { href: '/products', label: '📦 الأصناف والمخزون', title: 'الأصناف والمخزون', roles: ['admin', 'cashier'], group: 'المخزون' },
