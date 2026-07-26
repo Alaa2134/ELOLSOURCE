@@ -13,6 +13,45 @@
   --gold: #b8860b;
 }
 
+/* 🌙 الوضع الليلي — بيتفعّل من زرار القمر في الشريط العلوي */
+html[data-theme='dark'] {
+  --bg: #131a22;
+  --card: #1c2530;
+  --line: #2f3d4c;
+  --text: #e6edf4;
+  --muted: #9bacbf;
+  --brand: #24405f;
+  --brand-dark: #16283d;
+}
+html[data-theme='dark'] body { background: var(--bg); color: var(--text); }
+html[data-theme='dark'] input,
+html[data-theme='dark'] select,
+html[data-theme='dark'] textarea { background: #16202b; color: var(--text); border-color: var(--line); }
+html[data-theme='dark'] button, html[data-theme='dark'] .btn { background: #22303e; color: var(--text); border-color: var(--line); }
+html[data-theme='dark'] .btn-primary { background: var(--brand); color: #fff; }
+html[data-theme='dark'] .btn-accent { background: var(--accent); color: #fff; }
+html[data-theme='dark'] .btn-green { background: var(--green); color: #fff; }
+html[data-theme='dark'] .btn-red { background: var(--red); color: #fff; }
+html[data-theme='dark'] table.tbl { background: var(--card); color: var(--text); }
+html[data-theme='dark'] table.tbl th { background: #22303e; color: var(--text); }
+html[data-theme='dark'] table.tbl td { border-bottom-color: var(--line); }
+html[data-theme='dark'] table.tbl tr:nth-child(even) td { background: #1a232e; }
+html[data-theme='dark'] .card { background: var(--card); border-color: var(--line); }
+html[data-theme='dark'] .stat { background: var(--card); border-color: var(--line); }
+html[data-theme='dark'] .stat .value { color: var(--text); }
+html[data-theme='dark'] .card h3 { color: #7fb3e8; border-bottom-color: var(--line); }
+html[data-theme='dark'] .topbar { background: var(--card); border-bottom-color: var(--line); }
+html[data-theme='dark'] .topbar .title { color: #7fb3e8; }
+html[data-theme='dark'] .pos-grid td input { background: #16202b; color: var(--text); }
+html[data-theme='dark'] .picker-list, html[data-theme='dark'] .gsearch-list { background: var(--card); color: var(--text); }
+html[data-theme='dark'] .picker-list li.hi, html[data-theme='dark'] .gsearch-list li.hi { background: #2b3b4c; }
+html[data-theme='dark'] .dlg-box { background: var(--card); color: var(--text); }
+html[data-theme='dark'] .thermal-receipt { background: #fff; color: #000; }
+html[data-theme='dark'] .badge { filter: brightness(.92); }
+html[data-theme='dark'] .pos-totals { background: #1a232e; }
+/* الطباعة دايماً بالأبيض حتى في الوضع الليلي */
+@media print { html[data-theme='dark'] { --bg: #fff; --card: #fff; --text: #000; --line: #999; } }
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body { height: 100%; }
@@ -914,6 +953,19 @@ table.tbl tr:hover td { background: #fef3ec; }
 .acc-kinds button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
 
 .acc-simple .tbl td { padding: 12px 10px; font-size: 15px; }
+
+/* 🎤 زرار البحث بالصوت */
+.picker-mic, .gs-mic {
+  position: absolute; top: 50%; transform: translateY(-50%); left: 26px;
+  background: transparent !important; border: none !important; box-shadow: none !important;
+  padding: 2px 4px; font-size: 14px; line-height: 1; cursor: pointer; opacity: .6;
+}
+.gs-mic { left: 6px; }
+.picker-mic:hover, .gs-mic:hover { opacity: 1; }
+.picker-mic.on, .gs-mic.on { opacity: 1; animation: micPulse 1s infinite; }
+@keyframes micPulse { 0%,100% { transform: translateY(-50%) scale(1); } 50% { transform: translateY(-50%) scale(1.25); } }
+.gsearch { position: relative; }
+@media print { .picker-mic, .gs-mic { display: none !important; } }
 
 /* تظليل الكلام اللي المستخدم كتبه جوه اقتراحات الأصناف */
 .pick-hit { background: #ffe9a8; color: inherit; font-weight: 900; border-radius: 3px; padding: 0 1px; }

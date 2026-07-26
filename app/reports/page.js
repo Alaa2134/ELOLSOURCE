@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { listInvoices, listProducts, getSettings } from '@/lib/db';
 import { num, fmtDate } from '@/lib/format';
 import { BarsChart, TrendLine } from '@/components/Charts';
+import { exportExcel } from '@/lib/excel';
 
 function dayKey(iso) {
   const d = new Date(iso);
@@ -113,6 +114,33 @@ export default function ReportsPage() {
           <label className="field"><span>إلى تاريخ</span>
             <input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
           <button className="btn-primary" onClick={() => window.print()}>🖨️ طباعة التقرير</button>
+          <button
+            className="btn-green"
+            title="تنزيل التقرير كملف يفتح في إكسل"
+            onClick={() => exportExcel([
+              ['تقرير المبيعات', `من ${from}`, `إلى ${to}`],
+              [],
+              ['صافي المبيعات', stats.total, settings.currency],
+              ['عدد الفواتير', stats.count],
+              ['الربح التقريبي', Math.round(stats.profit)],
+              [],
+              ['المبيعات باليوم'],
+              ['اليوم', 'عدد الفواتير', 'الإجمالي'],
+              ...stats.byDay.map(([k, v]) => [k, v.count, Math.round(v.total)]),
+              [],
+              ['الأصناف الأكثر مبيعاً'],
+              ['الصنف', 'الكمية', 'الإجمالي', 'الربح'],
+              ...stats.topItems.map((it) => [it.name, it.qty, Math.round(it.total), Math.round(it.profit)]),
+              [],
+              ['مبيعات كل كاشير'],
+              ['الكاشير', 'المبيعات'],
+              ...stats.byCashier.map(([n, v]) => [n, Math.round(v)]),
+              [],
+              ['أبطأ الأصناف حركة (مخزون راكد)'],
+              ['الصنف', 'المخزون', 'القيمة الراكدة'],
+              ...stats.slow.map((p) => [p.name, p.stock, Math.round((Number(p.stock) || 0) * (Number(p.cost) || Number(p.price) || 0))]),
+            ], 'تقرير-المبيعات')}
+          >📊 تصدير Excel</button>
         </div>
       </div>
 

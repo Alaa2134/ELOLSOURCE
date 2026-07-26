@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { num } from '@/lib/format';
 import { searchProducts, similarProducts, normAr } from '@/lib/search';
+import { useVoiceSearch } from '@/lib/voice';
 
 // تظليل الكلمات اللي المستخدم كتبها جوه اسم الصنف — يشوف ليه الصنف ده ظهرله
 function Highlight({ text, words }) {
@@ -35,6 +36,13 @@ export default function ProductPicker({ value, products, onType, onSelect, onNav
   const [similar, setSimilar] = useState(false); // وضع "المشابهة" من السهم
   const [hi, setHi] = useState(0);
   const boxRef = useRef(null);
+
+  // البحث بالصوت: الكلام بيتكتب في الخانة على طول والاقتراحات بتفتح
+  const voice = useVoiceSearch((text) => {
+    onType(text);
+    setSimilar(false);
+    setOpen(true);
+  });
 
   const q = (value || '').trim();
   const words = useMemo(() => normAr(q).split(' ').filter(Boolean), [q]);
@@ -74,8 +82,19 @@ export default function ProductPicker({ value, products, onType, onSelect, onNav
         onBlur={() => setTimeout(() => { setOpen(false); setSimilar(false); }, 150)}
         onKeyDown={onKeyDown}
         autoComplete="off"
-        style={{ paddingLeft: 26 }}
+        style={{ paddingLeft: voice.supported ? 48 : 26 }}
       />
+      {voice.supported && (
+        <button
+          type="button"
+          tabIndex={-1}
+          className={`picker-mic ${voice.listening ? 'on' : ''}`}
+          title={voice.listening ? 'بيسمعك... اتكلم' : 'دوّر بصوتك'}
+          onMouseDown={(e) => { e.preventDefault(); voice.toggle(); }}
+        >
+          {voice.listening ? '🔴' : '🎤'}
+        </button>
+      )}
       <button
         type="button"
         tabIndex={-1}

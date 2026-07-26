@@ -1,8 +1,9 @@
 'use client';
 // بحث سريع موحّد: فاتورة (بالرقم) أو عميل أو صنف — من أي مكان في البرنامج
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { listInvoices, listCustomers, listProducts } from '@/lib/db';
+import { useVoiceSearch } from '@/lib/voice';
 
 export default function GlobalSearch() {
   const router = useRouter();
@@ -10,6 +11,23 @@ export default function GlobalSearch() {
   const [open, setOpen] = useState(false);
   const [hi, setHi] = useState(0);
   const boxRef = useRef(null);
+  const inputRef = useRef(null);
+
+  const voice = useVoiceSearch((text) => { setQ(text); setOpen(true); setHi(0); });
+
+  // Ctrl+K (أو ⌘K) بيفتح البحث من أي مكان في البرنامج
+  useEffect(() => {
+    function onKeyGlobal(e) {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K' || e.key === 'ن')) {
+        e.preventDefault();
+        inputRef.current?.focus();
+        inputRef.current?.select();
+        setOpen(true);
+      }
+    }
+    window.addEventListener('keydown', onKeyGlobal);
+    return () => window.removeEventListener('keydown', onKeyGlobal);
+  }, []);
 
   const results = useMemo(() => {
     const t = q.trim();
@@ -63,15 +81,26 @@ export default function GlobalSearch() {
   return (
     <div className="gsearch" ref={boxRef}>
       <input
+        ref={inputRef}
         className="printer-select"
-        style={{ minWidth: 200 }}
-        placeholder="🔍 دوّر على فاتورة / عميل / صنف"
+        style={{ minWidth: 200, paddingLeft: voice.supported ? 30 : undefined }}
+        placeholder="🔍 دوّر على فاتورة / عميل / صنف   (Ctrl+K)"
         value={q}
         onChange={(e) => { setQ(e.target.value); setOpen(true); setHi(0); }}
         onFocus={() => q && setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 180)}
         onKeyDown={onKey}
       />
+      {voice.supported && (
+        <button
+          type="button" tabIndex={-1}
+          className={`gs-mic ${voice.listening ? 'on' : ''}`}
+          title={voice.listening ? 'بيسمعك... اتكلم' : 'دوّر بصوتك'}
+          onMouseDown={(e) => { e.preventDefault(); voice.toggle(); }}
+        >
+          {voice.listening ? '🔴' : '🎤'}
+        </button>
+      )}
       {open && results.length > 0 && (
         <ul className="gsearch-list">
           {results.map((r, i) => (

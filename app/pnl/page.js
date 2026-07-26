@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { listInvoices, listProducts, listExpenses, getSettings } from '@/lib/db';
 import { num } from '@/lib/format';
+import { exportExcel } from '@/lib/excel';
 
 function monthKey(iso) {
   const d = new Date(iso);
@@ -77,6 +78,27 @@ export default function PnlPage() {
             </select>
           </label>
           <button className="btn-primary" onClick={() => window.print()}>🖨️ طباعة الكشف</button>
+          <button
+            className="btn-green"
+            onClick={() => exportExcel([
+              ['كشف الأرباح والخسائر', monthName(month)],
+              [settings.companyName],
+              [],
+              ['البند', `المبلغ (${cur})`],
+              ['المبيعات', Math.round(pnl.sales + pnl.returns)],
+              ['( − ) مرتجعات', -Math.round(pnl.returns)],
+              ['صافي المبيعات', Math.round(pnl.sales)],
+              ['( − ) تكلفة البضاعة المباعة', -Math.round(pnl.cogs)],
+              ['مجمل الربح', Math.round(pnl.gross)],
+              ['( − ) المصروفات', -Math.round(pnl.expTotal)],
+              ['صافي الربح', Math.round(pnl.net)],
+              ['هامش الربح %', pnl.margin],
+              [],
+              ['تفصيل المصروفات'],
+              ['البند', 'المبلغ'],
+              ...pnl.byCat.map(([k, v]) => [k, Math.round(v)]),
+            ], `أرباح-وخسائر-${month}`)}
+          >📊 تصدير Excel</button>
         </div>
       </div>
 
