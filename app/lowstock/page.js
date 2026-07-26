@@ -84,7 +84,6 @@ export default function LowStockPage() {
       {soonOut.length > 0 && (
         <div className="card" style={{ borderRight: '4px solid var(--accent)' }}>
           <h3>⏳ هتخلص قريب — حسب سرعة البيع آخر شهر</h3>
-          <p className="muted" style={{ marginTop: 0 }}>أصناف لسه مخزونها فوق الحد بس بتتباع بسرعة وهتنفد خلال أسبوع — الأفضل تطلبها بدري.</p>
           <table className="tbl">
             <thead><tr><th>الصنف</th><th>المورد</th><th>المخزون</th><th>بيع/يوم</th><th>هيكفي</th></tr></thead>
             <tbody>

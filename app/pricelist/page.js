@@ -54,9 +54,6 @@ export default function PriceListPage() {
           <span className="muted">{num(total, ar)} صنف</span>
           <button className="btn-primary" style={{ marginRight: 'auto' }} onClick={() => window.print()}>🖨️ طباعة / حفظ PDF</button>
         </div>
-        <p className="muted" style={{ fontSize: 13, marginTop: 8 }}>
-          💡 اطبعها أو احفظها PDF وابعتها لتجارك واتساب — الأسعار دي أسعار البيع (تاجر الجملة).
-        </p>
       </div>
 
       <div className="card pricelist-print">

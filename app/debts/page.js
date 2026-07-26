@@ -110,7 +110,7 @@ export default function DebtsPage() {
                   </td>
                 </tr>
               ))}
-              {!filtered.length && <tr><td colSpan={6} className="muted">مفيش مديونيات ✅ كل العملاء خالصين</td></tr>}
+              {!filtered.length && <tr><td colSpan={6} className="muted">✅ كل العملاء خالصين</td></tr>}
             </tbody>
           </table>
         </div>

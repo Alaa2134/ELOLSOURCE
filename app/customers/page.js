@@ -118,7 +118,6 @@ export default function CustomersPage() {
         <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <button className="btn-accent" onClick={() => pdfRef.current?.click()}>📄 استيراد عملاء من PDF</button>
           <input ref={pdfRef} type="file" accept=".pdf" hidden onChange={onPdfFile} />
-          <span className="muted" style={{ fontSize: 12 }}>الملف لازم يكون فيه أسماء وأرقام تليفون (بيقرأ الاسم + الموبايل + العنوان)</span>
           {msg && <b>{msg}</b>}
         </div>
 
@@ -134,7 +133,7 @@ export default function CustomersPage() {
         {pdfRows && (
           <div style={{ marginTop: 12, background: '#fff8f2', border: '1px solid var(--accent)', padding: 12, borderRadius: 8 }}>
             <h3 style={{ marginBottom: 8 }}>📄 معاينة عملاء الـ PDF ({num(pdfRows.length, ar)}) — راجع وعدّل قبل الإضافة</h3>
-            <p className="muted" style={{ marginBottom: 8, fontSize: 13 }}>🔁 العميل الموجود قبل كده (بالتليفون أو الاسم) هيتحدّث بس — مش هيتكرر.</p>
+            <p className="muted" style={{ marginBottom: 8, fontSize: 13 }}>العميل الموجود قبل كده هيتحدّث — مش هيتكرر.</p>
             <div style={{ maxHeight: 320, overflowY: 'auto' }}>
               <table className="tbl">
                 <thead><tr><th></th><th>الاسم</th><th>التليفون</th><th>العنوان</th></tr></thead>

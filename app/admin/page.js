@@ -238,9 +238,6 @@ export default function AdminPage() {
               <input dir="ltr" value={s.inquiryPassword} onChange={(e) => setS({ ...s, inquiryPassword: e.target.value })} />
             </label>
           </div>
-          <p className="muted" style={{ marginTop: 8, fontSize: 12 }}>
-            🔒 البرنامج بيقفل تلقائياً لو الجهاز دخل وضع السكون أو اتساب فترة، وبيطلب كلمة السر تاني.
-          </p>
         </div>
 
         <div className="card">
@@ -258,16 +255,11 @@ export default function AdminPage() {
               </label>
             ))}
           </div>
-          <p className="muted" style={{ marginTop: 10, fontSize: 12 }}>
-            💡 لوحة التحكم والتقارير والإعدادات ولوحة الأدمن للأدمن فقط — الكاشير بيشوف بس اللي مسموح له بيه.
-          </p>
         </div>
 
         <div className="card">
           <h3>👥 كاشيرين بأسماء</h3>
-          <p className="muted" style={{ marginBottom: 10, fontSize: 13 }}>
-            كل كاشير له اسمه وكلمة سره — والفاتورة بتتسجّل باسم اللي عملها. أنشئ كاشير جديد أو احذف.
-          </p>
+          <p className="muted" style={{ marginBottom: 10, fontSize: 13 }}>الفاتورة بتتسجّل باسم الكاشير اللي عملها.</p>
           <table className="tbl" style={{ marginBottom: 10 }}>
             <thead><tr><th>الاسم</th><th>كلمة السر</th><th></th></tr></thead>
             <tbody>
@@ -280,7 +272,7 @@ export default function AdminPage() {
                   </td>
                 </tr>
               ))}
-              {!cashiers.length && <tr><td colSpan={3} className="muted">مفيش كاشيرين بأسماء بعد — بيدخلوا بكلمة الكاشير العامة</td></tr>}
+              {!cashiers.length && <tr><td colSpan={3} className="muted">مفيش كاشيرين بأسماء — بيدخلوا بكلمة الكاشير العامة</td></tr>}
             </tbody>
           </table>
           <div className="grid cols-3" style={{ gap: 8, alignItems: 'end' }}>
@@ -427,10 +419,7 @@ export default function AdminPage() {
 
         <div className="card">
           <h3>📱 الدخول من التليفون</h3>
-          <p className="muted" style={{ fontSize: 13, marginBottom: 8 }}>
-            امسح الكود ده بكاميرا الموبايل (آيفون أو أندرويد) لفتح صفحة استعلام الأسعار — وتقدر تضيفها
-            للشاشة الرئيسية كتطبيق.
-          </p>
+          <p className="muted" style={{ fontSize: 13, marginBottom: 8 }}>امسحه بكاميرا الموبايل يفتح صفحة استعلام الأسعار.</p>
           {phoneQr && <img src={phoneQr} alt="QR" style={{ display: 'block', margin: '0 auto' }} />}
           <p style={{ textAlign: 'center', fontSize: 12 }} className="muted" dir="ltr">
             {(s.publicBaseUrl || (typeof window !== 'undefined' ? window.location.origin : '')) + '/inquiry'}
@@ -523,7 +512,6 @@ export default function AdminPage() {
                 );
               })}
             </div>
-            <p className="muted" style={{ fontSize: 12 }}>✅ أي تعديل بيتحفظ لوحده وبيسري على كل الأجهزة</p>
           </div>
           <div className="inv-preview-wrap">
             <div className="inv-preview">

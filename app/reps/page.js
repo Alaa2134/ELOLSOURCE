@@ -107,7 +107,7 @@ export default function RepsPage() {
         </div>
 
         {!Object.keys(byRep).length && (
-          <p className="muted">مفيش فواتير مع مندوبين حالياً — حدد المندوب وأنت بتعمل الفاتورة في شاشة البيع 🛵</p>
+          <p className="muted">مفيش فواتير مع مندوبين — حدد المندوب وانت بتعمل الفاتورة.</p>
         )}
 
         {Object.entries(byRep).map(([repName, invs]) => {

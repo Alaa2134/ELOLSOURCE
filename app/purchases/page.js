@@ -300,10 +300,7 @@ export default function PurchasesPage() {
 
       <div className="card">
         <h3>🧾 أسماء الموردين — تعديل الاسم والهاتف ({num(allSuppliers.length, ar)})</h3>
-        <p className="muted" style={{ marginTop: 0 }}>
-          دي كل أسماء الموردين اللي على أصنافك. عدّل الاسم أو الهاتف والتعديل بيتحفظ لوحده —
-          لو غيّرت الاسم، كل أصناف المورد بتتنقل للاسم الجديد تلقائياً.
-        </p>
+        <p className="muted" style={{ marginTop: 0 }}>لو غيّرت اسم المورد، كل أصنافه بتتنقل للاسم الجديد لوحدها.</p>
         <div style={{ maxHeight: 420, overflowY: 'auto' }}>
         <table className="tbl">
           <thead>
@@ -338,7 +335,7 @@ export default function PurchasesPage() {
               <td>—</td>
               <td style={{ textAlign: 'center' }}><button className="btn-sm btn-green" onClick={addSup}>➕ إضافة</button></td>
             </tr>
-            {!allSuppliers.length && <tr><td colSpan={5} className="muted">لا يوجد موردين بعد — أضف واحد أو احفظ فاتورة شراء</td></tr>}
+            {!allSuppliers.length && <tr><td colSpan={5} className="muted">لسه مفيش موردين</td></tr>}
           </tbody>
         </table>
         </div>

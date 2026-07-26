@@ -83,8 +83,7 @@ export default function Dashboard() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
-        <h2 style={{ color: 'var(--brand)', margin: 0 }}>👋 أهلاً — ده ملخّص اليوم</h2>
+      <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
         <div style={{ display: 'flex', gap: 8 }}>
           <a className="btn btn-green" target="_blank" rel="noreferrer" href={`https://wa.me/?text=${encodeURIComponent(dailySummaryText())}`} title="ابعت ملخص اليوم على واتساب لنفسك أو للإدارة">
             📤 ملخص اليوم واتساب
@@ -93,7 +92,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid cols-4" style={{ marginBottom: 8 }}>
+      <div className="grid stats-row" style={{ marginBottom: 8 }}>
         <div className="stat green" style={{ borderTopColor: 'var(--gold)' }}>
           <div className="label">📈 ربح النهارده (تقريبي)</div>
           <div className="value">{num(Math.round(todayProfit), ar)} <small style={{ fontSize: 14 }}>{s.currency}</small></div>
@@ -166,7 +165,7 @@ export default function Dashboard() {
                   <td><b>{num(i.totals?.net || 0, ar)}</b></td>
                 </tr>
               ))}
-              {!invoices.length && <tr><td colSpan={5} className="muted">لا توجد فواتير بعد — ابدأ البيع! 🚀</td></tr>}
+              {!invoices.length && <tr><td colSpan={5} className="muted">لسه مفيش فواتير</td></tr>}
             </tbody>
           </table>
         </div>
