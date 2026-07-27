@@ -7,6 +7,7 @@ import {
   saveSettings,
   listInvoices,
   runDailyBackup,
+  checkCloudTables,
   cloudLinkHash,
   getCloudConfig,
   setCloudConfig,
@@ -114,6 +115,8 @@ export default function AdminPage() {
   const [stats, setStats] = useState({ today: 0, month: 0, count: 0 });
   const [phoneQr, setPhoneQr] = useState('');
   const [apkQr, setApkQr] = useState(''); // QR تنزيل تطبيق المندوب
+  const [tables, setTables] = useState(null); // فحص جداول السحابة
+  const [checking, setChecking] = useState(false);
   // إدارة الكاشيرين بأسماء
   const [cashiers, setCashiers] = useState([]);
   const [newCashier, setNewCashier] = useState({ name: '', pin: '' });
@@ -418,6 +421,53 @@ export default function AdminPage() {
           }} disabled={!s.backupUrl}>
             ☁️ إرسال نسخة الآن للتجربة
           </button>
+        </div>
+
+        <div className="card">
+          <h3>🩺 فحص جداول السحابة</h3>
+          <p className="muted" style={{ fontSize: 13, marginBottom: 10 }}>
+            أي جدول ناقص معناه إن البيانات دي شغّالة على الجهاز بس ومش بتتزامن.
+          </p>
+          <button className="btn-primary" disabled={checking} onClick={async () => {
+            setChecking(true);
+            setTables(await checkCloudTables());
+            setChecking(false);
+          }}>{checking ? '⏳ بيفحص...' : '🩺 افحص دلوقتي'}</button>
+
+          {tables && (
+            <>
+              {(() => {
+                const missing = tables.filter((t) => t.ok === false);
+                const unknown = tables.filter((t) => t.ok === null);
+                return (
+                  <div style={{ marginTop: 12 }}>
+                    {missing.length > 0 && (
+                      <p className="red-text" style={{ marginBottom: 8 }}>
+                        ⚠️ فيه {missing.length} جدول ناقص — اضغط «📋 انسخ كود الجداول» تحت وشغّله في Supabase
+                      </p>
+                    )}
+                    {missing.length === 0 && unknown.length === 0 && (
+                      <p className="badge green" style={{ marginBottom: 8, display: 'inline-block' }}>
+                        ✅ كل الجداول موجودة — كل حاجة بتتزامن
+                      </p>
+                    )}
+                    {unknown.length > 0 && (
+                      <p className="muted" style={{ marginBottom: 8 }}>
+                        ⏱️ {unknown.length} جدول النت اتأخر عليهم — جرب الفحص تاني لما النت يبقى أحسن
+                      </p>
+                    )}
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {tables.map((t) => (
+                        <span key={t.name} className={`badge ${t.ok === true ? 'green' : t.ok === false ? 'red' : 'orange'}`}>
+                          {t.ok === true ? '✅' : t.ok === false ? '❌' : '⏱️'} {t.label}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+            </>
+          )}
         </div>
 
         <div className="card">
